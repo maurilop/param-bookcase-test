@@ -1,0 +1,17 @@
+{
+  "name": "param-bookcase-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Biblioteca paramétrica de madera: diseño, plan de corte y configurador web",
+  "scripts": {
+    "construir": "python3 construir_web.py",
+    "test": "node tests/prueba_pyodide.mjs && node tests/prueba_web.mjs"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^153.0.0",
+    "puppeteer-core": "^25.12.0",
+    "pyodide": "0.26.4",
+    "three": "0.160.0"
+  }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurador de bibliotecas</title>
+<style>
+{{CSS}}
+</style>
+<script type="importmap">{{IMPORTMAP}}</script>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <header>
+      <h1>Biblioteca a medida</h1>
+      <p>Elegí las medidas y mirá cómo queda. Todo se recalcula con las reglas de fabricación reales.</p>
+    </header>
+    <div id="controles"></div>
+    <div id="mensajes"></div>
+    <footer>
+      <button id="btn-reiniciar" class="sec">Restablecer</button>
+      <button id="btn-enlace" class="sec">Copiar enlace</button>
+    </footer>
+  </aside>
+  <main>
+    <nav id="tabs">
+      <button data-tab="vista" class="act">Vista 3D</button>
+      <button data-tab="plan">Plan de corte</button>
+      <button data-tab="datos">Datos técnicos</button>
+      <span id="estado-calculo"></span>
+    </nav>
+    <section id="vista" class="tab act">
+      <div id="lienzo">
+        <canvas id="c"></canvas>
+        <div id="etiquetas"></div>
+        <div id="tip"></div>
+        <div id="barra">
+          <button data-vista="persp">Perspectiva</button>
+          <button data-vista="frontal">Frontal</button>
+          <button data-vista="lateral">Lateral</button>
+          <button data-vista="encuadrar">Encuadrar</button>
+          <label><input type="checkbox" id="chk-cotas" checked> Cotas</label>
+          <label><input type="checkbox" id="chk-pared" checked> Pared</label>
+        </div>
+        <div id="resumen"></div>
+      </div>
+    </section>
+    <section id="plan" class="tab"><div id="plan-contenido" class="pagina"></div></section>
+    <section id="datos" class="tab"><div id="datos-contenido" class="pagina"></div></section>
+  </main>
+</div>
+<div id="cargando"><div class="caja"><div class="rueda"></div><p id="cargando-texto">Iniciando…</p></div></div>
+{{PYTHON}}
+<script id="worker-src" type="text/plain">
+{{WORKER}}
+</script>
+<script>window.__CFG = {{CFG}};</script>
+<script type="module">
+{{APP}}
+</script>
+</body>
+</html>

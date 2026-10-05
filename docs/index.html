@@ -1,0 +1,2459 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurador de bibliotecas</title>
+<style>
+:root { --madera:#b9854a; --madera-osc:#8a5f2e; --tinta:#2c2a27; --suave:#6d675e; --linea:#e3ddd2; --fondo:#f6f3ee; --ok:#2e7d4f; --err:#b3261e; --av:#a15c00; }
+* { box-sizing:border-box; }
+html, body { height:100%; margin:0; }
+body { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:var(--tinta); background:var(--fondo); font-size:14px; }
+#app { display:grid; grid-template-columns: 340px 1fr; height:100vh; }
+#panel { background:#fff; border-right:1px solid var(--linea); overflow-y:auto; padding:18px 18px 12px; display:flex; flex-direction:column; gap:10px; }
+#panel header h1 { margin:0 0 4px; font-size:21px; letter-spacing:-.2px; }
+#panel header p { margin:0; color:var(--suave); font-size:13px; line-height:1.35; }
+.grupo { border-top:1px solid var(--linea); padding-top:10px; }
+.grupo h2 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--madera-osc); }
+.ctl { margin-bottom:10px; }
+.ctl label { display:block; font-size:13px; margin-bottom:3px; }
+.ctl .fila { display:flex; align-items:center; gap:8px; }
+.ctl input[type=range] { flex:1; accent-color:var(--madera); }
+.ctl input[type=number], .ctl select { width:78px; padding:5px 6px; border:1px solid var(--linea); border-radius:6px; font-size:13px; background:#fff; color:var(--tinta); }
+.ctl select { width:auto; flex:1; }
+.ctl .u { width:22px; color:var(--suave); font-size:12px; }
+.ctl .auto { font-size:12px; color:var(--madera-osc); cursor:pointer; background:none; border:none; padding:0 0 0 6px; text-decoration:underline; }
+.check { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; }
+details.grupo summary { cursor:pointer; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--madera-osc); margin-bottom:8px; }
+button { font:inherit; cursor:pointer; }
+button.prim { background:var(--madera); color:#fff; border:none; border-radius:8px; padding:8px 12px; width:100%; }
+button.prim:hover { background:var(--madera-osc); }
+button.sec { background:#fff; border:1px solid var(--linea); border-radius:8px; padding:7px 10px; flex:1; color:var(--tinta); }
+button.sec:hover { background:var(--fondo); }
+footer { display:flex; gap:8px; margin-top:auto; padding-top:8px; }
+#mensajes .msg { border-radius:8px; padding:8px 10px; margin-bottom:6px; font-size:12.5px; line-height:1.35; }
+.msg.err { background:#fdecea; color:var(--err); border:1px solid #f3c6c2; }
+.msg.av { background:#fff4e0; color:var(--av); border:1px solid #f1d9a9; }
+.msg.nota { background:#eef5ef; color:var(--ok); border:1px solid #cfe3d3; }
+main { display:flex; flex-direction:column; min-width:0; }
+#tabs { display:flex; align-items:center; gap:4px; padding:10px 14px 0; border-bottom:1px solid var(--linea); background:#fff; }
+#tabs button { background:none; border:none; padding:9px 14px; border-bottom:3px solid transparent; color:var(--suave); }
+#tabs button.act { color:var(--tinta); border-bottom-color:var(--madera); font-weight:600; }
+#estado-calculo { margin-left:auto; font-size:12px; color:var(--suave); padding-right:6px; }
+.tab { display:none; flex:1; min-height:0; }
+.tab.act { display:block; }
+#lienzo { position:relative; height:100%; background:linear-gradient(#e9eef2, #f6f3ee 70%); }
+#c { width:100%; height:100%; display:block; }
+#etiquetas { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.cota { position:absolute; transform:translate(-50%,-50%); background:rgba(255,255,255,.92); border:1px solid var(--linea); border-radius:5px; padding:1px 6px; font-size:12px; color:var(--tinta); white-space:nowrap; }
+#tip { position:absolute; display:none; pointer-events:none; background:rgba(44,42,39,.92); color:#fff; padding:6px 9px; border-radius:6px; font-size:12px; max-width:280px; line-height:1.35; }
+#barra { position:absolute; top:12px; left:12px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,.9); padding:6px 8px; border-radius:10px; border:1px solid var(--linea); }
+#barra button { background:#fff; border:1px solid var(--linea); border-radius:6px; padding:4px 9px; font-size:12.5px; }
+#barra label { font-size:12.5px; color:var(--suave); display:flex; align-items:center; gap:4px; margin-left:4px; }
+#resumen { position:absolute; left:12px; right:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
+.pill { background:rgba(255,255,255,.94); border:1px solid var(--linea); border-radius:10px; padding:7px 11px; min-width:120px; }
+.pill b { display:block; font-size:16px; } .pill span { font-size:11.5px; color:var(--suave); }
+.pagina { padding:18px 22px; overflow:auto; height:100%; }
+.pagina h3 { margin:18px 0 8px; font-size:14px; } .pagina h3:first-child { margin-top:0; }
+table { border-collapse:collapse; font-size:13px; margin-bottom:6px; }
+th, td { border:1px solid var(--linea); padding:5px 10px; text-align:left; } th { background:#faf7f2; font-weight:600; }
+.tarjetas { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.tarjeta { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:10px 14px; min-width:150px; } .tarjeta b { font-size:20px; display:block; } .tarjeta span { font-size:12px; color:var(--suave); }
+.svgbox { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:8px; overflow:auto; }
+.svgbox svg { max-width:100%; height:auto; }
+.nota-chica { font-size:12px; color:var(--suave); margin-top:4px; line-height:1.4; }
+#cargando { position:fixed; inset:0; background:rgba(246,243,238,.96); display:flex; align-items:center; justify-content:center; z-index:50; }
+#cargando.oculto { display:none; }
+#cargando .caja { text-align:center; } #cargando p { color:var(--suave); max-width:320px; }
+.rueda { width:38px; height:38px; margin:0 auto 12px; border:4px solid var(--linea); border-top-color:var(--madera); border-radius:50%; animation:g 0.9s linear infinite; }
+@keyframes g { to { transform:rotate(360deg); } }
+@media (max-width: 820px) { #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height:auto; min-height:100vh; } #panel { border-right:none; border-bottom:1px solid var(--linea); } #lienzo { height:70vh; } main { min-height:70vh; } }
+
+</style>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <header>
+      <h1>Biblioteca a medida</h1>
+      <p>Elegí las medidas y mirá cómo queda. Todo se recalcula con las reglas de fabricación reales.</p>
+    </header>
+    <div id="controles"></div>
+    <div id="mensajes"></div>
+    <footer>
+      <button id="btn-reiniciar" class="sec">Restablecer</button>
+      <button id="btn-enlace" class="sec">Copiar enlace</button>
+    </footer>
+  </aside>
+  <main>
+    <nav id="tabs">
+      <button data-tab="vista" class="act">Vista 3D</button>
+      <button data-tab="plan">Plan de corte</button>
+      <button data-tab="datos">Datos técnicos</button>
+      <span id="estado-calculo"></span>
+    </nav>
+    <section id="vista" class="tab act">
+      <div id="lienzo">
+        <canvas id="c"></canvas>
+        <div id="etiquetas"></div>
+        <div id="tip"></div>
+        <div id="barra">
+          <button data-vista="persp">Perspectiva</button>
+          <button data-vista="frontal">Frontal</button>
+          <button data-vista="lateral">Lateral</button>
+          <button data-vista="encuadrar">Encuadrar</button>
+          <label><input type="checkbox" id="chk-cotas" checked> Cotas</label>
+          <label><input type="checkbox" id="chk-pared" checked> Pared</label>
+        </div>
+        <div id="resumen"></div>
+      </div>
+    </section>
+    <section id="plan" class="tab"><div id="plan-contenido" class="pagina"></div></section>
+    <section id="datos" class="tab"><div id="datos-contenido" class="pagina"></div></section>
+  </main>
+</div>
+<div id="cargando"><div class="caja"><div class="rueda"></div><p id="cargando-texto">Iniciando…</p></div></div>
+<script type="text/plain" id="py_biblioteca_param">"""
+biblioteca_param.py
+-------------------
+Fuente única de verdad del diseño de la biblioteca.
+
+Recibe parámetros y devuelve los contornos 2D de cada pieza (postes y tablas).
+Python puro, sin dependencias: sirve igual dentro de Rhino 8, en un backend web,
+en el nesting y en la generación del archivo CNC.
+
+Convenciones
+- Unidades: milímetros.
+- Cada contorno es una lista de vértices (x, y, bulge), recorrida en sentido
+  antihorario. El "bulge" del vértice i describe el tramo i -> i+1:
+  0 = recta; >0 = arco antihorario (mismo criterio que LWPOLYLINE de DXF;
+  bulge = tan(ángulo_del_arco / 4)).
+- Poste:  x = profundidad (0 = atrás, p.profundidad = frente), y = altura desde la base.
+- Tabla:  x = profundidad (0 = atrás, p.profundidad = frente), y = largo.
+"""
+import math
+import random
+from dataclasses import dataclass, field, replace
+from typing import List, Optional, Tuple
+
+# ----------------------------------------------------------------------------
+# Constantes de diseño FIJAS (acordadas por ahora)
+# ----------------------------------------------------------------------------
+BASE_A_PRIMERA_RANURA = 200.0 # base del poste -> inicio de la primera ranura
+SEPARACION_MIN = 110.0        # mínimo de material macizo entre el borde de una ranura y el inicio de la
+                              # siguiente. Con tablas separadas 2 ranuras deja >= 2*110 + 15 = 235 mm libres.
+ULTIMA_RANURA_A_TOPE = 100.0  # fin de la última ranura -> extremo superior del poste
+VOLADIZO = 100.0              # lo que la tabla sobresale de los postes extremos
+PROFUNDIDAD_DEFECTO = 193.0   # profundidad (ancho) de postes y tablas; con la placa de 1220 mm y fresa de
+                              # 6 mm es lo máximo que permite 6 columnas de piezas por placa
+# La profundidad de las ranuras es siempre la mitad de la profundidad de la pieza: así las
+# dos mitades de cada encastre se tocan exactamente (ver prof_ranura).
+R_BOCA = 5.0                  # redondeo de la boca de las ranuras y esquinas traseras
+R_FRENTE = 20.0               # redondeo de las esquinas frontales
+
+# Anclaje de los postes a la pared: escuadra empotrada en el poste (invisible de frente).
+# Medidas de la escuadra (decisión de diseño; se ajustan cuando se defina el herraje):
+ANCLAJE_ESPESOR_DEFECTO = 2.0  # espesor de la chapa = profundidad de la muesca y del rebaje
+ANCLAJE_ALTO_DEFECTO = 20.0    # alto de la escuadra (a lo largo del poste)
+ANCLAJE_ANCHO_DEFECTO = 40.0   # largo del brazo que apoya sobre la cara lateral del poste
+AGUJERO_RADIO_DEFECTO = 2.25   # radio del agujero pasante del pasador (2,25 mm = Ø4,5, para un tornillo M4)
+FRESA_MANUAL_DEFECTO = 6.0     # diámetro de la fresa del router manual (rebaje de la cara opuesta)
+BUJE_DEFECTO = 10.0            # diámetro exterior del buje guía del router manual
+HOLGURA_U_DEFECTO = 0.5        # holgura en el ancho interior de la U de la escuadra
+# La profundidad de la escuadra (base contra la pared) es siempre el espesor de la placa.
+ANCLAJE_A_RANURA = 10.0       # distancia entre la escuadra y la ranura más cercana (1 cm)
+ANCLAJE_HOLGURA = 1.0         # holgura total en el alto de la muesca y del rebaje
+NUCLEO_MIN = 6.0              # espesor mínimo del núcleo de madera entre los dos rebajes del poste
+ANCLAJES = ("ninguno", "superior", "ambos")
+
+# ----------------------------------------------------------------------------
+# Reglas estructurales (deducidas; a confirmar con el prototipo físico)
+# ----------------------------------------------------------------------------
+MIN_TABLAS_POR_TRAMO = 2      # cada tramo entre postes contiguos lo cruzan >= 2 tablas
+ZONA_ATADO = 2                # cada poste debe estar atado en las 2 ranuras más bajas y en las 2 más altas
+
+# Luz entre postes: el límite lo da la FLECHA de las tablas con libros (la resistencia sobra).
+# Se calcula una tabla apoyada en dos postes (caso más desfavorable), con fluencia a largo plazo.
+LUZ_MIN = 250.0               # > 2 x voladizo (si no, tablas contiguas a igual altura se tocan) y deja
+                              # apoyar acostado un libro de ~230 mm
+E_DISENO = 7000.0             # MPa, módulo de elasticidad de la multiplaca, veta paralela a la luz.
+                              # Valor conservador (publicados: 7000-10000). A CONFIRMAR con un ensayo.
+CARGA_LIBROS = 0.002          # N/mm2 = 2,0 kPa (~200 kg por m2 de estante, libros de tapa dura de ~23 cm)
+FLUENCIA = 1.6                # la flecha crece ~60 % con el tiempo bajo carga (EN 1995, contrachapado)
+LIM_FLECHA = 300.0            # flecha final admisible = luz / 300
+
+# ----------------------------------------------------------------------------
+# Límites PROVISORIOS (a confirmar con el prototipo físico)
+# ----------------------------------------------------------------------------
+LIMITES = {
+    "t": (5.0, 30.0),             # espesor del tablero
+    "h": (0.0, 0.5),              # holgura (definida por vos)
+    "n_postes": (2, 20),
+    "n_ranuras": (4, 40),
+    "remanente_min": 20.0,        # material mínimo que debe quedar entre ranuras / sobre el zócalo
+    "zocalo_alto": (0.0, 150.0),
+    "zocalo_prof": (0.0, 50.0),
+    "profundidad": (100.0, 300.0),  # profundidad de postes y tablas
+    "fresa": (3.0, 12.0),          # diámetro de la fresa
+    "anclaje_alto": (8.0, 60.0),
+    "anclaje_ancho": (15.0, 80.0),
+    "anclaje_espesor": (1.0, 5.0),
+    "agujero_radio": (1.0, 5.0),
+    "fresa_manual": (3.0, 12.0),
+    "buje": (6.0, 30.0),
+    "holgura_u": (0.0, 2.0),
+    "n_tablas": (2, 120),         # el mínimo real depende de los postes (ver min_tablas)
+    "sep_min": (1, 10),           # separación mínima (en ranuras) entre tablas de un mismo tramo
+}
+
+
+# ----------------------------------------------------------------------------
+# Placa (tablero) de partida
+# ----------------------------------------------------------------------------
+@dataclass
+class Placa:
+    nombre: str
+    largo: float                 # mm, dirección de la veta
+    ancho: float                 # mm
+    espesor_nominal: float       # mm, el que figura en el comercio
+    espesor_real: float          # mm, medido con calibre (define las ranuras)
+    margen_borde: float = 10.0   # mm sin usar en cada borde (PROVISORIO)
+    precio_usd: float = 0.0      # precio de referencia por placa
+    proveedor: str = ""
+    codigo: str = ""
+    no_rotar: bool = True        # la veta debe quedar a lo largo de la placa: las piezas no se rotan
+
+
+# Multiplaca de abedul 15 mm, 2,44 x 1,22 m - Barraca Paraná, cód. MAB15244.
+# Precio de referencia: U$S 115,71 (consultado el 2026-10-03). Etiquetada "no-rotar".
+# El espesor real hay que medirlo con calibre; hasta entonces se asume el nominal.
+PLACA_ABEDUL_15 = Placa(
+    nombre="Multiplaca abedul 15 mm", largo=2440.0, ancho=1220.0,
+    espesor_nominal=15.0, espesor_real=15.0, margen_borde=10.0,
+    precio_usd=115.71, proveedor="Barraca Paraná", codigo="MAB15244", no_rotar=True,
+)
+
+
+def largo_util(placa: Placa) -> float:
+    return placa.largo - 2 * placa.margen_borde
+
+
+def ancho_util(placa: Placa) -> float:
+    return placa.ancho - 2 * placa.margen_borde
+
+
+@dataclass
+class Tabla:
+    """Una tabla horizontal: de qué poste a qué poste va y en qué ranura."""
+    poste_ini: int   # índice del primer poste que cruza (0 = el primero)
+    poste_fin: int   # índice del último poste que cruza (inclusive)
+    ranura: int      # índice de ranura (0 = la más baja)
+
+
+# Configuración del modelo original (biblioteca.3dm)
+TABLAS_DEMO = [
+    Tabla(0, 3, 15), Tabla(0, 3, 0),
+    Tabla(1, 3, 13), Tabla(0, 2, 6), Tabla(1, 3, 4),
+    Tabla(0, 1, 10), Tabla(2, 3, 10), Tabla(2, 3, 2), Tabla(1, 2, 8),
+]
+
+
+@dataclass
+class Params:
+    t: Optional[float] = None  # espesor de trabajo; si es None se usa el espesor real de la placa
+    placa: Placa = field(default_factory=lambda: PLACA_ABEDUL_15)
+    h: float = 0.0             # holgura (0 a 0,5)
+    n_postes: int = 4
+    luz: Optional[float] = None  # luz libre entre postes; si es None se usa la máxima estructural luz_max(t)
+    n_ranuras: int = 16
+    separacion: float = SEPARACION_MIN   # material entre ranuras consecutivas (mín. SEPARACION_MIN)
+    anclaje: str = "ambos"      # anclaje a la pared en cada poste: "ninguno", "superior" o "ambos"
+    anclaje_alto: float = ANCLAJE_ALTO_DEFECTO       # alto de la escuadra
+    anclaje_ancho: float = ANCLAJE_ANCHO_DEFECTO     # largo del brazo lateral de la escuadra
+    anclaje_espesor: float = ANCLAJE_ESPESOR_DEFECTO # espesor de la chapa de la escuadra
+    agujero_radio: float = AGUJERO_RADIO_DEFECTO     # radio del agujero PASANTE del pasador
+    holgura_u: float = HOLGURA_U_DEFECTO             # holgura del ancho interior de la U
+    fresa_manual: float = FRESA_MANUAL_DEFECTO       # fresa del router manual (rebaje de la cara opuesta)
+    buje: float = BUJE_DEFECTO                       # buje guía del router manual (diámetro exterior)
+    fresa: float = 6.0         # diámetro de la fresa: define los alivios de los rincones y la separación entre piezas
+    profundidad: float = PROFUNDIDAD_DEFECTO   # profundidad (ancho) de postes y tablas
+    # Tablas horizontales. Dos modos:
+    #  - automático (tablas=None): se generan n_tablas con posiciones al azar
+    #    reproducibles según 'semilla'
+    #  - manual: lista explícita de Tabla(...)
+    tablas: Optional[List[Tabla]] = None
+    n_tablas: int = 9           # total, incluidas las 2 estructurales (base y tope)
+    semilla: int = 0            # cambiar la semilla = otra distribución al azar
+    sep_min: int = 2            # separación mínima en ranuras entre tablas de un mismo tramo
+    ranuras_unicas: bool = False # True: ninguna altura (ranura) se repite en todo el mueble
+                                 # (False: solo se prohíbe repetirla en un mismo poste)
+    zocalo: bool = True
+    zocalo_alto: float = 55.0
+    zocalo_prof: float = 15.0
+    # Solo para validar contra el modelo original, que tiene la ranura del poste
+    # en 20 por error. En uso normal dejar en None (ancho = t + h).
+    _ancho_ranura_poste: float = None
+    # Idem, solo para validar contra el modelo original (base 160 y paso 120):
+    _base_inferior: float = None
+    _paso: float = None
+
+    def __post_init__(self):
+        if self.t is None:
+            self.t = self.placa.espesor_real
+        if self.luz is None:
+            self.luz = luz_max(self.t)
+
+
+@dataclass
+class Pieza:
+    nombre: str
+    tipo: str                       # "poste" | "tabla"
+    contorno: List[Tuple[float, float, float]]
+    espesor: float
+    cantidad: int
+    ancho: float                    # bbox en x
+    largo: float                    # bbox en y
+    # Mecanizados de profundidad parcial (rebajes y agujeros ciegos), todos desde la cara de corte
+    # (la cara superior de la placa): [{tipo, contorno, prof, ...}]
+    mecanizados: list = field(default_factory=list)
+    # Agujeros pasantes (contornos interiores): [{tipo, contorno, centro, radio, con_broca, ...}]
+    huecos: list = field(default_factory=list)
+    material: str = "multiplaca"    # las plantillas y reglas son de MDF y no entran en el nesting de la placa
+
+
+# ----------------------------------------------------------------------------
+# Medidas derivadas
+# ----------------------------------------------------------------------------
+def ancho_ranura(p: Params) -> float:
+    return p.t + p.h
+
+
+def luz_max(t: float) -> float:
+    """Luz máxima entre postes (mm) para que la flecha final de una tabla de espesor t, cargada con
+    libros, no pase de luz/LIM_FLECHA. Resulta proporcional al espesor (~36 x t); se redondea
+    hacia abajo a múltiplos de 5 mm. Para t = 15 mm da 540 mm."""
+    c = FLUENCIA * 60.0 / 384.0
+    return math.floor(t * (E_DISENO / (c * CARGA_LIBROS * LIM_FLECHA)) ** (1.0 / 3.0) / 5.0 + 1e-9) * 5.0
+
+
+def flecha_final(luz: float, t: float) -> float:
+    """Flecha final estimada (mm) de una tabla apoyada en dos postes, con libros y fluencia."""
+    c = FLUENCIA * 60.0 / 384.0
+    return c * CARGA_LIBROS * luz ** 4 / (E_DISENO * t ** 3)
+
+
+def base_inferior(p: Params) -> float:
+    """Espacio bajo la ranura más baja."""
+    return p._base_inferior if p._base_inferior is not None else BASE_A_PRIMERA_RANURA
+
+
+def paso(p: Params) -> float:
+    """Distancia de inicio a inicio entre ranuras consecutivas = separación + ancho de ranura."""
+    return p._paso if p._paso is not None else p.separacion + ancho_ranura(p)
+
+
+def z_ranura(p: Params, k: int) -> float:
+    """Altura (desde la base del poste) donde empieza la ranura k (0 = la más baja)."""
+    return base_inferior(p) + k * paso(p)
+
+
+def espacio_libre(p: Params) -> float:
+    """Espacio vertical libre entre dos tablas separadas sep_min ranuras (para los libros)."""
+    return p.sep_min * paso(p) - p.t
+
+
+def altura_con(n_ranuras: int, t: float, h: float, separacion: float) -> float:
+    """Alto del poste para n ranuras con una separación dada."""
+    return BASE_A_PRIMERA_RANURA + ULTIMA_RANURA_A_TOPE + n_ranuras * (t + h) + (n_ranuras - 1) * separacion
+
+
+def altura_poste(p: Params) -> float:
+    w = p._ancho_ranura_poste if p._ancho_ranura_poste else ancho_ranura(p)
+    return base_inferior(p) + (p.n_ranuras - 1) * paso(p) + w + ULTIMA_RANURA_A_TOPE
+
+
+def alivio(p: Params) -> float:
+    """Radio de los alivios de los rincones interiores = radio de la fresa, con signo negativo para
+    _redondear. Con fresa 0 no se hacen alivios (solo para comparar con el modelo original)."""
+    return -p.fresa / 2.0 if p.fresa > 0 else 0.0
+
+
+def alto_muesca(p: Params) -> float:
+    """Alto de la muesca trasera para la escuadra. La muesca (2 mm) es menos profunda que el radio de
+    la fresa, así que los rincones quedan redondeados: se agranda el alto para que la chapa entre igual
+    (con fresa 6 mm: 20 -> 26,7 mm). Se ajusta sola con la fresa."""
+    r, d = p.fresa / 2.0, p.anclaje_espesor
+    extra = 0.0 if r <= 0 else (math.sqrt(2 * r * d - d * d) if d < r else r)
+    return p.anclaje_alto + 2 * extra + ANCLAJE_HOLGURA
+
+
+def anclajes(p: Params) -> list:
+    """Posición de las escuadras en cada poste: la superior 1 cm sobre la ranura más alta y la inferior
+    1 cm bajo la ranura más baja. Devuelve [{nombre, z_ini, z_fin}] con la altura de la escuadra."""
+    if p.anclaje == "ninguno":
+        return []
+    z_ult = z_ranura(p, p.n_ranuras - 1) + ancho_ranura(p)
+    res = [{"nombre": "superior", "z_ini": z_ult + ANCLAJE_A_RANURA,
+            "z_fin": z_ult + ANCLAJE_A_RANURA + p.anclaje_alto}]
+    if p.anclaje == "ambos":
+        z_pri = z_ranura(p, 0)
+        res.append({"nombre": "inferior", "z_ini": z_pri - ANCLAJE_A_RANURA - p.anclaje_alto,
+                    "z_fin": z_pri - ANCLAJE_A_RANURA})
+    return res
+
+
+def muescas_anclaje(p: Params) -> list:
+    """(z_abajo, z_arriba) de cada muesca trasera, de arriba hacia abajo."""
+    h = alto_muesca(p)
+    out = [((a["z_ini"] + a["z_fin"]) / 2 - h / 2, (a["z_ini"] + a["z_fin"]) / 2 + h / 2) for a in anclajes(p)]
+    return sorted(out, key=lambda t: -t[0])
+
+
+def _circulo(cx: float, cz: float, r: float):
+    """Contorno de un círculo: dos semicírculos antihorarios (bulge = 1)."""
+    return [(cx - r, cz, 1.0), (cx + r, cz, 1.0)]
+
+
+def _rect(x0, z0, x1, z1):
+    """Rectángulo antihorario como contorno."""
+    return [(x0, z0, 0.0), (x1, z0, 0.0), (x1, z1, 0.0), (x0, z1, 0.0)]
+
+
+def _zona_escuadra(p: Params, a: dict):
+    """Límites del rebaje (con holgura) y centro de la escuadra de un anclaje."""
+    zc = (a["z_ini"] + a["z_fin"]) / 2
+    x0, x1 = p.anclaje_espesor, p.anclaje_ancho + ANCLAJE_HOLGURA / 2
+    h = p.anclaje_alto + ANCLAJE_HOLGURA
+    return zc, x0, x1, zc - h / 2, zc + h / 2
+
+
+def mecanizados_poste(p: Params) -> list:
+    """Rebajes de profundidad parcial para la escuadra en U, en las DOS caras del poste:
+      - cara de corte (+Y): lo hace la CNC, con alivios en los dos rincones del extremo según la fresa.
+      - cara opuesta (-Y): lo hace a mano un router con la plantilla (ver herrajes.plantilla_router); sus rincones
+        quedan redondeados con el radio de la fresa manual, así que los brazos de la escuadra deben llevar
+        las puntas redondeadas con ese radio como mínimo.
+    Ambos arrancan en el fondo de la muesca trasera y miden lo mismo en el plano del poste."""
+    out = []
+    e = p.anclaje_espesor
+    al = alivio(p)
+    rm = p.fresa_manual / 2.0
+    for a in anclajes(p):
+        zc, x0, x1, z0, z1 = _zona_escuadra(p, a)
+        # CNC: horario (el espacio vaciado queda a la derecha del recorrido, igual que las ranuras)
+        out.append({"tipo": "rebaje", "cara": "corte", "manual": False, "anclaje": a["nombre"], "prof": e,
+                    "contorno": _redondear([(x0, z0, 0), (x0, z1, 0), (x1, z1, al), (x1, z0, al)])})
+        # Manual: antihorario, con las dos esquinas del extremo redondeadas por la fresa manual
+        out.append({"tipo": "rebaje", "cara": "opuesta", "manual": True, "anclaje": a["nombre"], "prof": e,
+                    "contorno": _redondear([(x0, z0, 0), (x1, z0, rm), (x1, z1, rm), (x0, z1, 0)])})
+    return out
+
+
+def huecos_poste(p: Params) -> list:
+    """Agujero PASANTE del pasador en cada escuadra, centrado en alto y en largo sobre el brazo lateral.
+    Atraviesa brazo, poste y brazo; sirve de referencia para la plantilla del rebaje manual."""
+    out = []
+    for a in anclajes(p):
+        zc = (a["z_ini"] + a["z_fin"]) / 2
+        xc = p.anclaje_ancho / 2                         # centro del brazo lateral (medido desde la pared)
+        out.append({"tipo": "agujero", "anclaje": a["nombre"], "centro": (xc, zc), "radio": p.agujero_radio,
+                    "contorno": _circulo(xc, zc, p.agujero_radio), "pasante": True,
+                    "con_broca": 2 * p.agujero_radio < p.fresa})
+    return out
+
+
+def cortes_3d(p: Params) -> list:
+    """Cortadores para restar en el modelo 3D de cada poste (rebajes de las dos caras y agujero pasante).
+    Cada uno: contorno (en el plano del poste), y_desde (distancia desde la cara -Y del poste) y largo
+    (extrusión hacia +Y). Se pasan 1 mm de la cara para que la resta booleana quede limpia.
+    La cara de corte es la +Y: en el montaje, la cara superior de la placa queda hacia +Y."""
+    e, t = p.anclaje_espesor, p.t
+    al, rm = alivio(p), p.fresa_manual / 2.0
+    out = []
+    for a in anclajes(p):
+        zc, x0, x1, z0, z1 = _zona_escuadra(p, a)
+        xs = -1.0       # el cortador arranca fuera del canto trasero: así su cara no coincide con la de la muesca
+        out.append({"tipo": "rebaje_corte", "y_desde": t - e, "largo": e + 1.0,
+                    "contorno": _redondear([(xs, z0, 0), (xs, z1, 0), (x1, z1, al), (x1, z0, al)])})
+        out.append({"tipo": "rebaje_manual", "y_desde": -1.0, "largo": e + 1.0,
+                    "contorno": _redondear([(xs, z0, 0), (x1, z0, rm), (x1, z1, rm), (xs, z1, 0)])})
+    for h in huecos_poste(p):
+        out.append({"tipo": "agujero", "contorno": h["contorno"], "y_desde": -1.0, "largo": t + 2.0})
+    return out
+
+
+def prof_ranura(p: Params) -> float:
+    """Profundidad de las ranuras (postes y tablas): la mitad de la profundidad de la pieza."""
+    return p.profundidad / 2.0
+
+
+def largo_tabla(p: Params, n_postes_cruzados: int) -> float:
+    n = n_postes_cruzados
+    return n * p.t + (n - 1) * p.luz + 2 * VOLADIZO
+
+
+def pos_poste(p: Params, k: int) -> float:
+    """Coordenada (a lo largo del mueble) donde empieza el poste k."""
+    return k * (p.t + p.luz)
+
+
+# ----------------------------------------------------------------------------
+# Tablas: reglas, colisiones y distribución al azar
+# ----------------------------------------------------------------------------
+def _comparten_poste(a: Tabla, b: Tabla) -> bool:
+    return max(a.poste_ini, b.poste_ini) <= min(a.poste_fin, b.poste_fin)
+
+
+def _comparten_tramo(a: Tabla, b: Tabla) -> bool:
+    """¿Ambas cruzan al menos un mismo hueco entre postes contiguos?"""
+    return max(a.poste_ini, b.poste_ini) < min(a.poste_fin, b.poste_fin)
+
+
+def _conflicto(p: Params, a: Tabla, b: Tabla) -> Optional[str]:
+    """Motivo por el que dos tablas no pueden convivir, o None si no hay problema."""
+    if a.ranura == b.ranura:
+        if _comparten_poste(a, b):
+            return "comparten un poste en la misma ranura"
+        if p.ranuras_unicas:
+            return "usan la misma ranura"
+        izq, der = (a, b) if a.poste_fin < b.poste_ini else (b, a)
+        if der.poste_ini == izq.poste_fin + 1 and p.luz <= 2 * VOLADIZO:
+            return f"sus voladizos se tocan (luz ≤ {2 * VOLADIZO:.0f})"
+        return None
+    if _comparten_tramo(a, b) and abs(a.ranura - b.ranura) < p.sep_min:
+        return f"quedan a menos de {p.sep_min} ranuras en un mismo tramo"
+    return None
+
+
+def max_postes_por_tabla(p: Params) -> int:
+    """Cuántos postes puede cruzar como máximo una tabla sin superar el largo útil de la placa."""
+    n = int((largo_util(p.placa) - 2 * VOLADIZO + p.luz) // (p.t + p.luz))
+    return max(2, min(n, p.n_postes))
+
+
+def tramos_estructurales(p: Params) -> int:
+    """Cantidad de tablas encadenadas que hacen falta para atar todos los postes
+    (con una tabla de largo completo sería 1)."""
+    return max(1, math.ceil((p.n_postes - 1) / (max_postes_por_tabla(p) - 1)))
+
+
+def min_tablas(p: Params) -> int:
+    """Mínimo de tablas: una cadena atando todos los postes por abajo y otra por arriba."""
+    return 2 * tramos_estructurales(p)
+
+
+def _cadena(p: Params, rnd: random.Random, ranuras: List[int]) -> List[Tabla]:
+    """Tablas encadenadas que cubren todos los postes. Tablas consecutivas comparten
+    un poste (a alturas distintas, alternando las ranuras dadas)."""
+    P = p.n_postes
+    m = tramos_estructurales(p)
+    base, resto = divmod(P + m - 1, m)
+    mayores = set(rnd.sample(range(m), resto))
+    tablas, ini = [], 0
+    for i in range(m):
+        fin = ini + base + (1 if i in mayores else 0) - 1
+        tablas.append(Tabla(ini, fin, ranuras[i % len(ranuras)]))
+        ini = fin
+    return tablas
+
+
+_CACHE_TABLAS = {}
+
+
+def generar_tablas(p: Params):
+    """Distribuye p.n_tablas tablas (reproducible con p.semilla).
+    1) Estructurales: una cadena de tablas que ata todos los postes por abajo
+       (ranuras 0 y 1 alternadas) y otra por arriba (últimas dos ranuras). Con pocos
+       postes cada cadena es una sola tabla de largo completo.
+    2) El resto se ubica al azar respetando todas las reglas.
+    Devuelve (tablas, avisos)."""
+    clave = (p.n_postes, p.n_ranuras, p.luz, p.t, p.n_tablas, p.semilla, p.sep_min,
+             p.ranuras_unicas, p.placa.largo, p.placa.margen_borde)
+    if clave in _CACHE_TABLAS:
+        t, a = _CACHE_TABLAS[clave]
+        return list(t), list(a)
+    P, R = p.n_postes, p.n_ranuras
+    rnd = random.Random(p.semilla)
+    tablas = _cadena(p, rnd, [0, 1]) + _cadena(p, rnd, [R - 1, R - 2])
+    avisos = []
+    faltan = p.n_tablas - len(tablas)
+    nmax = max_postes_por_tabla(p)
+    intentos, max_intentos = 0, max(3000, 600 * max(faltan, 1))
+    while faltan > 0 and intentos < max_intentos:
+        intentos += 1
+        n = rnd.randint(2, nmax)
+        ini = rnd.randrange(0, P - n + 1)
+        c = Tabla(ini, ini + n - 1, rnd.randrange(0, R))
+        if all(_conflicto(p, c, t) is None for t in tablas):
+            tablas.append(c)
+            faltan -= 1
+    if faltan > 0:
+        avisos.append(f"Solo se pudieron ubicar {p.n_tablas - faltan} de {p.n_tablas} tablas "
+                      "con las reglas actuales. Probá otra semilla, menos tablas, más ranuras "
+                      "o una separación mínima menor.")
+    res = sorted(tablas, key=lambda t: (t.ranura, t.poste_ini))
+    if len(_CACHE_TABLAS) > 256:
+        _CACHE_TABLAS.clear()
+    _CACHE_TABLAS[clave] = (list(res), list(avisos))
+    return res, avisos
+
+
+def tablas_efectivas(p: Params):
+    """(tablas, avisos): las manuales si hay, o las generadas al azar."""
+    if p.tablas is not None:
+        return list(p.tablas), []
+    return generar_tablas(p)
+
+
+def _lista(nums, tope=12):
+    nums = list(nums)
+    txt = ", ".join(str(n) for n in nums[:tope])
+    return txt + (f" y {len(nums) - tope} más" if len(nums) > tope else "")
+
+
+def _errores_tablas(p: Params, tablas: List[Tabla]) -> List[str]:
+    e = []
+    P, R, Z = p.n_postes, p.n_ranuras, ZONA_ATADO
+    for i, tb in enumerate(tablas, 1):
+        if not (0 <= tb.poste_ini < tb.poste_fin < P):
+            e.append(f"Tabla {i}: postes {tb.poste_ini}-{tb.poste_fin} inválidos "
+                     "(debe cruzar al menos 2 postes existentes).")
+        if not 0 <= tb.ranura < R:
+            e.append(f"Tabla {i}: ranura {tb.ranura} inexistente (0 a {R - 1}).")
+    if e:
+        return e  # evita errores en cascada
+
+    # Estructurales: cada poste atado por abajo y por arriba
+    sin_base = [k for k in range(P)
+                if not any(t.poste_ini <= k <= t.poste_fin and t.ranura < Z for t in tablas)]
+    if sin_base:
+        e.append(f"Postes sin atar por abajo: {_lista(sin_base)}. Cada poste necesita una tabla "
+                 f"que lo cruce en las ranuras 0 a {Z - 1}.")
+    sin_tope = [k for k in range(P)
+                if not any(t.poste_ini <= k <= t.poste_fin and t.ranura >= R - Z for t in tablas)]
+    if sin_tope:
+        e.append(f"Postes sin atar por arriba: {_lista(sin_tope)}. Cada poste necesita una tabla "
+                 f"que lo cruce en las ranuras {R - Z} a {R - 1}.")
+    flojos = [g for g in range(P - 1)
+              if sum(1 for t in tablas if t.poste_ini <= g and t.poste_fin >= g + 1) < MIN_TABLAS_POR_TRAMO]
+    if flojos:
+        e.append(f"Tramos (entre el poste g y g+1) con menos de {MIN_TABLAS_POR_TRAMO} tablas "
+                 f"que los crucen: g = {_lista(flojos)}.")
+    # Largo de pieza
+    for n in sorted({t.poste_fin - t.poste_ini + 1 for t in tablas}):
+        if largo_tabla(p, n) > largo_util(p.placa):
+            e.append(f"Una tabla que cruza {n} postes mide {largo_tabla(p, n):.0f} mm y no entra "
+                     f"en la placa ({largo_util(p.placa):.0f} mm útiles).")
+    # Pares
+    for i in range(len(tablas)):
+        for j in range(i + 1, len(tablas)):
+            motivo = _conflicto(p, tablas[i], tablas[j])
+            if motivo:
+                e.append(f"Tablas {i + 1} y {j + 1}: {motivo}.")
+    return e
+
+
+# ----------------------------------------------------------------------------
+# Validación de reglas
+# ----------------------------------------------------------------------------
+def validar(p: Params) -> List[str]:
+    e = []
+    lo, hi = LIMITES["t"]
+    if not lo <= p.t <= hi:
+        e.append(f"Espesor t={p.t} fuera de rango [{lo}, {hi}].")
+    lo, hi = LIMITES["h"]
+    if not lo <= p.h <= hi:
+        e.append(f"Holgura h={p.h} fuera de rango [{lo}, {hi}].")
+    if p.luz < LUZ_MIN - 1e-9:
+        e.append(f"Luz {p.luz:.0f} mm menor a la mínima ({LUZ_MIN:.0f} mm).")
+    elif p.luz > luz_max(p.t) + 1e-9:
+        e.append(f"Luz {p.luz:.0f} mm mayor a la máxima estructural ({luz_max(p.t):.0f} mm para tablas de "
+                 f"{p.t:g} mm): con libros la flecha sería {flecha_final(p.luz, p.t):.1f} mm "
+                 f"(luz/{p.luz / flecha_final(p.luz, p.t):.0f}); el límite es luz/{LIM_FLECHA:.0f}.")
+    lo, hi = LIMITES["n_postes"]
+    if not lo <= p.n_postes <= hi:
+        e.append(f"Cantidad de postes {p.n_postes} fuera de rango [{lo}, {hi}].")
+    lo, hi = LIMITES["n_ranuras"]
+    if not lo <= p.n_ranuras <= hi:
+        e.append(f"Cantidad de ranuras {p.n_ranuras} fuera de rango [{lo}, {hi}].")
+    lo, hi = LIMITES["sep_min"]
+    if not lo <= p.sep_min <= hi:
+        e.append(f"Separación mínima {p.sep_min} fuera de rango [{lo}, {hi}].")
+    if p.tablas is None:
+        lo, hi = LIMITES["n_tablas"]
+        if not lo <= p.n_tablas <= hi:
+            e.append(f"Cantidad de tablas {p.n_tablas} fuera de rango [{lo}, {hi}].")
+        elif 2 <= p.n_postes and p.n_tablas < min_tablas(p):
+            m = tramos_estructurales(p)
+            e.append(f"Con {p.n_postes} postes hacen falta al menos {min_tablas(p)} tablas "
+                     f"({m} por abajo y {m} por arriba para atar todos los postes).")
+        elif p.ranuras_unicas and tramos_estructurales(p) > ZONA_ATADO:
+            e.append(f"Con {p.n_postes} postes hacen falta {tramos_estructurales(p)} tablas encadenadas "
+                     f"y solo hay {ZONA_ATADO} ranuras de atado: desactivá 'ranuras_unicas'.")
+        elif p.ranuras_unicas and p.n_tablas > p.n_ranuras:
+            e.append(f"Con ranuras únicas no puede haber más tablas ({p.n_tablas}) "
+                     f"que ranuras ({p.n_ranuras}).")
+
+    if tramos_estructurales(p) > 1 and p.n_ranuras < p.sep_min + 3:
+        e.append(f"Con {p.n_postes} postes las tablas de atado van encadenadas (alternan dos alturas abajo "
+                 f"y dos arriba) y hacen falta al menos {p.sep_min + 3} ranuras "
+                 f"(alto mínimo {altura_con(p.sep_min + 3, p.t, p.h, SEPARACION_MIN):.0f} mm).")
+
+    lo, hi = LIMITES["fresa"]
+    if not lo <= p.fresa <= hi:
+        e.append(f"Fresa de {p.fresa:g} mm fuera de rango [{lo:g}, {hi:g}].")
+    elif p.fresa * math.sqrt(2.0) > ancho_ranura(p) + 1e-9:
+        e.append(f"Con una fresa de {p.fresa:g} mm los alivios de los rincones miden {p.fresa * math.sqrt(2.0):.1f} mm "
+                 f"y no entran en una ranura de {ancho_ranura(p):.1f} mm. Usá una fresa de hasta "
+                 f"{ancho_ranura(p) / math.sqrt(2.0):.1f} mm o tablas más gruesas.")
+    rem = LIMITES["remanente_min"]
+    if p.separacion < SEPARACION_MIN - 1e-9:
+        e.append(f"La separación entre ranuras ({p.separacion:.1f} mm) es menor al mínimo de "
+                 f"{SEPARACION_MIN:.0f} mm.")
+    if p.anclaje not in ANCLAJES:
+        e.append(f"anclaje '{p.anclaje}' inválido: usar {', '.join(ANCLAJES)}.")
+    elif p.anclaje != "ninguno":
+        n_err_antes = len(e)
+        for campo in ("anclaje_alto", "anclaje_ancho", "anclaje_espesor", "agujero_radio", "fresa_manual", "buje", "holgura_u"):
+            lo, hi = LIMITES[campo]
+            if not lo <= getattr(p, campo) <= hi:
+                e.append(f"{campo} = {getattr(p, campo):g} fuera de rango [{lo:g}, {hi:g}].")
+        if len(e) == n_err_antes:             # medidas dentro de rango: se comprueban las relaciones entre ellas
+            d_al = p.fresa / math.sqrt(2.0)
+            h_reb = p.anclaje_alto + ANCLAJE_HOLGURA
+            if p.fresa > 0 and h_reb < 2 * d_al + 0.5:
+                e.append(f"Una escuadra de {p.anclaje_alto:g} mm de alto es muy baja para una fresa de {p.fresa:g} mm: "
+                         f"los alivios del rebaje necesitan al menos {2 * d_al - ANCLAJE_HOLGURA + 0.5:.1f} mm.")
+            if p.anclaje_ancho - p.anclaje_espesor < d_al + 1:
+                e.append(f"Una escuadra de {p.anclaje_ancho:g} mm de ancho es muy corta para el alivio de la fresa.")
+            if p.t - 2 * p.anclaje_espesor < NUCLEO_MIN:
+                e.append(f"Dos rebajes de {p.anclaje_espesor:g} mm dejan un núcleo de {p.t - 2 * p.anclaje_espesor:g} mm "
+                         f"en un poste de {p.t:g} mm; el mínimo es {NUCLEO_MIN:g} mm.")
+            if p.buje < p.fresa_manual + 2:
+                e.append(f"El buje ({p.buje:g} mm) debe ser al menos 2 mm mayor que la fresa manual ({p.fresa_manual:g} mm).")
+            xc = p.anclaje_ancho / 2
+            if 2 * p.agujero_radio + 2 > p.anclaje_alto:
+                e.append(f"El agujero del pasador (Ø{2 * p.agujero_radio:g} mm) no entra en una escuadra de "
+                         f"{p.anclaje_alto:g} mm de alto (se necesita 1 mm de borde a cada lado).")
+            if xc - p.agujero_radio < p.anclaje_espesor + 2 or (p.anclaje_ancho + ANCLAJE_HOLGURA / 2 - xc) < p.agujero_radio + d_al + 1:
+                e.append(f"El agujero del pasador (Ø{2 * p.agujero_radio:g} mm) no entra, centrado, en una escuadra de "
+                         f"{p.anclaje_ancho:g} mm de ancho.")
+        mu = muescas_anclaje(p)
+        if mu and mu[0][1] > altura_poste(p) - 10:
+            e.append("La muesca del anclaje superior queda a menos de 10 mm del extremo del poste.")
+        if p.anclaje == "ambos" and p.zocalo and p.zocalo_alto > 0 and p.zocalo_prof > 0:
+            zb = min(m[0] for m in mu)
+            if zb - p.zocalo_alto < rem:
+                e.append(f"Con anclaje inferior, el recorte del zócalo no puede superar {zb - rem:.0f} mm de alto "
+                         f"(la muesca de la escuadra empieza a {zb:.0f} mm).")
+    if altura_poste(p) > largo_util(p.placa):
+        e.append(f"El poste mide {altura_poste(p):.0f} mm y no entra en la placa "
+                 f"({largo_util(p.placa):.0f} mm útiles). Reducí la cantidad de ranuras.")
+    lo, hi = LIMITES["profundidad"]
+    if not lo <= p.profundidad <= hi:
+        e.append(f"Profundidad {p.profundidad} fuera de rango [{lo}, {hi}].")
+    if p.profundidad > ancho_util(p.placa):
+        e.append(f"La profundidad de las piezas ({p.profundidad:.0f} mm) no entra en el ancho útil "
+                 f"de la placa ({ancho_util(p.placa):.0f} mm).")
+
+    if p.zocalo:
+        lo, hi = LIMITES["zocalo_alto"]
+        if not lo <= p.zocalo_alto <= hi:
+            e.append(f"Alto del zócalo {p.zocalo_alto} fuera de rango [{lo}, {hi}].")
+        if base_inferior(p) - p.zocalo_alto < rem:
+            e.append("El recorte del zócalo llega demasiado cerca de la primera ranura "
+                     f"(máximo {base_inferior(p) - rem:.0f} mm de alto).")
+        lo, hi = LIMITES["zocalo_prof"]
+        if not lo <= p.zocalo_prof <= hi:
+            e.append(f"Profundidad del zócalo {p.zocalo_prof} fuera de rango [{lo}, {hi}].")
+        d_al = p.fresa / math.sqrt(2.0)
+        if p.zocalo_alto > 0 and p.zocalo_prof > 0 and (p.zocalo_prof < d_al or p.zocalo_alto < d_al):
+            e.append(f"El recorte del zócalo es muy chico para una fresa de {p.fresa:g} mm: debe medir al menos "
+                     f"{d_al:.1f} mm de alto y de profundidad (o 0 para no hacerlo).")
+
+    if not e:  # las reglas de tablas necesitan parámetros básicos válidos
+        tablas, _ = tablas_efectivas(p)
+        e += _errores_tablas(p, tablas)
+    return e
+
+
+# ----------------------------------------------------------------------------
+# Geometría
+# ----------------------------------------------------------------------------
+def _redondear(pts):
+    """pts: [(x, y, radio)] en sentido antihorario.
+      - radio > 0: el vértice (convexo) se reemplaza por un arco tangente.
+      - radio < 0: ALIVIO ("dog-bone") para una fresa de radio |radio| en un rincón interior de 90°:
+        el vértice se reemplaza por un semicírculo de diámetro = diámetro de la fresa que pasa
+        justo por el vértice, así la fresa llega al rincón y la pieza que encastra entra.
+    Devuelve [(x, y, bulge)]."""
+    n = len(pts)
+    info = []
+    for i, (x, y, r) in enumerate(pts):
+        ax, ay, _ = pts[i - 1]
+        bx, by, _ = pts[(i + 1) % n]
+        ux, uy, vx, vy = ax - x, ay - y, bx - x, by - y
+        lu, lv = math.hypot(ux, uy), math.hypot(vx, vy)
+        ux, uy, vx, vy = ux / lu, uy / lu, vx / lv, vy / lv
+        alfa = math.acos(max(-1.0, min(1.0, ux * vx + uy * vy)))
+        if r > 0:
+            d = r / math.tan(alfa / 2)
+        elif r < 0:
+            if abs(alfa - math.pi / 2) > 1e-6:
+                raise ValueError("Un alivio solo se puede hacer en un rincón de 90°.")
+            d = abs(r) * math.sqrt(2.0)
+        else:
+            d = 0.0
+        info.append((ux, uy, vx, vy, alfa, d, lu, lv))
+    for i in range(n):  # los dos redondeos de una arista no pueden superponerse
+        d_i, d_sig = info[i][5], info[(i + 1) % n][5]
+        largo = info[i][7]
+        if d_i + d_sig > largo + 1e-6:
+            raise ValueError("Redondeos superpuestos en una arista: revisar parámetros.")
+    out = []
+    for (x, y, r), (ux, uy, vx, vy, alfa, d, _, _) in zip(pts, info):
+        if r == 0:
+            out.append((x, y, 0.0))
+        elif r > 0:
+            out.append((x + ux * d, y + uy * d, math.tan((math.pi - alfa) / 4)))
+            out.append((x + vx * d, y + vy * d, 0.0))
+        else:   # alivio: semicírculo horario (rincón interior de un contorno antihorario)
+            out.append((x + ux * d, y + uy * d, -1.0))
+            out.append((x + vx * d, y + vy * d, 0.0))
+    return out
+
+
+def contorno_poste(p: Params):
+    w = p._ancho_ranura_poste if p._ancho_ranura_poste else ancho_ranura(p)
+    H = altura_poste(p)
+    zd = p.zocalo_prof if p.zocalo else 0.0
+    zh = p.zocalo_alto if p.zocalo else 0.0
+    pts = []
+    if p.zocalo and zd > 0 and zh > 0:
+        pts += [(zd, 0, 0)]
+    else:
+        pts += [(0, 0, 0)]
+    D, s = p.profundidad, prof_ranura(p)
+    al = alivio(p)                                    # radio del alivio (0 = sin alivios)
+    pts += [(D, 0, 0)]
+    for k in range(p.n_ranuras):                      # frente, de abajo hacia arriba
+        z0 = z_ranura(p, k)
+        pts += [(D, z0, R_BOCA),
+                (D - s, z0, al),
+                (D - s, z0 + w, al),
+                (D, z0 + w, R_BOCA)]
+    pts += [(D, H, R_FRENTE), (0, H, 0)]
+    for (zb, za) in muescas_anclaje(p):               # canto trasero, de arriba hacia abajo
+        pts += [(0, za, 0), (p.anclaje_espesor, za, 0), (p.anclaje_espesor, zb, 0), (0, zb, 0)]
+    if p.zocalo and zd > 0 and zh > 0:
+        pts += [(0, zh, 0), (zd, zh, al)]
+    return _redondear(pts)
+
+
+def contorno_tabla(p: Params, n_cruzados: int):
+    w = ancho_ranura(p)
+    L = largo_tabla(p, n_cruzados)
+    D, s = p.profundidad, prof_ranura(p)
+    al = alivio(p)
+    pts = [(0, 0, R_BOCA), (D, 0, R_FRENTE),
+           (D, L, R_FRENTE), (0, L, R_BOCA)]
+    for j in reversed(range(n_cruzados)):             # borde trasero, de arriba hacia abajo
+        a = VOLADIZO + j * (p.t + p.luz) - p.h / 2    # holgura centrada sobre el poste
+        b = a + w
+        pts += [(0, b, R_BOCA), (s, b, al), (s, a, al), (0, a, R_BOCA)]
+    return _redondear(pts)
+
+
+def generar_piezas(p: Params) -> List[Pieza]:
+    """Devuelve la lista de piezas únicas con su cantidad."""
+    err = validar(p)
+    if err:
+        raise ValueError("Parámetros inválidos:\n- " + "\n- ".join(err))
+    piezas = [Pieza("poste", "poste", contorno_poste(p), p.t, p.n_postes,
+                    p.profundidad, altura_poste(p), mecanizados_poste(p), huecos_poste(p))]
+    cuenta = {}
+    for tb in tablas_efectivas(p)[0]:
+        n = tb.poste_fin - tb.poste_ini + 1
+        cuenta[n] = cuenta.get(n, 0) + 1
+    for n in sorted(cuenta):
+        piezas.append(Pieza(f"tabla_{n}_postes", "tabla", contorno_tabla(p, n),
+                            p.t, cuenta[n], p.profundidad, largo_tabla(p, n)))
+    return piezas
+
+
+def estimar_placas(p: Params) -> dict:
+    """Cota inferior por superficie (el nesting real necesitará algo más)."""
+    sup = sum(area(pz.contorno) * pz.cantidad for pz in generar_piezas(p))
+    util = largo_util(p.placa) * ancho_util(p.placa)
+    n = math.ceil(sup / util)
+    return {"superficie_piezas_m2": sup / 1e6, "placas_minimas": n,
+            "costo_minimo_usd": n * p.placa.precio_usd}
+
+
+def ancho_total(p: Params) -> float:
+    """Ancho de punta a punta del mueble: incluye el voladizo de las tablas a cada lado."""
+    return p.n_postes * p.t + (p.n_postes - 1) * p.luz + 2 * VOLADIZO
+
+
+def ancho_entre_postes(p: Params) -> float:
+    return p.n_postes * p.t + (p.n_postes - 1) * p.luz
+
+
+def resumen(p: Params) -> dict:
+    return {
+        "alto_total": altura_poste(p),
+        "ancho_total_mueble": ancho_total(p),
+        "ancho_entre_postes": ancho_entre_postes(p),
+        "profundidad_total": p.profundidad,
+        "ancho_ranura": ancho_ranura(p),
+        "anclaje": p.anclaje,
+        "anclajes": anclajes(p),
+        "muesca_anclaje": (p.anclaje_espesor, alto_muesca(p)),
+        "agujero": {"radio": p.agujero_radio, "diametro": 2 * p.agujero_radio, "pasante": True,
+                    "con_broca": 2 * p.agujero_radio < p.fresa},
+        "luz": p.luz,
+        "luz_max": luz_max(p.t),
+        "flecha_estimada": flecha_final(p.luz, p.t),
+        "separacion": p.separacion,
+        "paso": paso(p),
+        "espacio_libre_entre_tablas": espacio_libre(p),
+        "n_postes": p.n_postes,
+        "n_tablas": len(tablas_efectivas(p)[0]),
+    }
+
+
+# ----------------------------------------------------------------------------
+# Utilidades geométricas (arcos <-> puntos)
+# ----------------------------------------------------------------------------
+def punto_medio_arco(x0, y0, x1, y1, bulge):
+    """Punto medio del arco entre (x0,y0) y (x1,y1) para un bulge dado."""
+    return ((x0 + x1) / 2 + (y1 - y0) * bulge / 2,
+            (y0 + y1) / 2 - (x1 - x0) * bulge / 2)
+
+
+def muestrear(contorno, pasos_arco=24):
+    """Convierte el contorno a una polilínea densa (lista de (x, y))."""
+    n = len(contorno)
+    pts = []
+    for i in range(n):
+        x0, y0, b = contorno[i]
+        x1, y1, _ = contorno[(i + 1) % n]
+        pts.append((x0, y0))
+        if b != 0:
+            # bulge con signo: > 0 arco antihorario, < 0 arco horario (p. ej. los alivios)
+            theta = 4 * math.atan(b)                       # barrido con signo
+            c = math.hypot(x1 - x0, y1 - y0)
+            r = c * (1 + b * b) / (4 * abs(b))             # radio (positivo)
+            k = c * (1 - b * b) / (4 * b)                  # desplazamiento del centro sobre la normal izquierda
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            cx, cy = mx + (-(y1 - y0) / c) * k, my + ((x1 - x0) / c) * k
+            a0 = math.atan2(y0 - cy, x0 - cx)
+            for s in range(1, pasos_arco):
+                a = a0 + theta * s / pasos_arco
+                pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def area(contorno):
+    pts = muestrear(contorno, 64)
+    s = 0.0
+    for i in range(len(pts)):
+        x0, y0 = pts[i]
+        x1, y1 = pts[(i + 1) % len(pts)]
+        s += x0 * y1 - x1 * y0
+    return s / 2
+
+
+# ----------------------------------------------------------------------------
+# Medidas totales -> parámetros
+# ----------------------------------------------------------------------------
+def n_ranuras_max(alto_total: float, t: float, h: float) -> int:
+    """Mayor cantidad de ranuras que entran en el alto dado respetando SEPARACION_MIN."""
+    w = t + h
+    x = (alto_total - BASE_A_PRIMERA_RANURA - ULTIMA_RANURA_A_TOPE - w) / (SEPARACION_MIN + w)
+    return int(math.floor(x + 1e-9)) + 1
+
+
+def separacion_para(alto_total: float, n_ranuras: int, t: float, h: float) -> float:
+    """Separación entre ranuras que reparte n ranuras en el alto dado (alto exacto)."""
+    return (alto_total - BASE_A_PRIMERA_RANURA - ULTIMA_RANURA_A_TOPE - n_ranuras * (t + h)) / (n_ranuras - 1)
+
+
+def limites_dimensiones(t: float, h: float, placa: Placa) -> dict:
+    """Menor y mayor alto y ancho posibles (para mensajes y para los controles de la web)."""
+    nlo = LIMITES["n_ranuras"][0]
+    plo, phi = LIMITES["n_postes"]
+    return {"alto_min": altura_con(nlo, t, h, SEPARACION_MIN), "alto_max": largo_util(placa),
+            "ancho_min": plo * t + (plo - 1) * LUZ_MIN + 2 * VOLADIZO,
+            "ancho_max": phi * t + (phi - 1) * luz_max(t) + 2 * VOLADIZO}
+
+
+def n_tablas_sugerido(p: Params) -> int:
+    """Cantidad de tablas por defecto cuando el mueble se define por sus medidas: mantiene la
+    densidad del diseño original (9 tablas en 3 tramos de 16 ranuras)."""
+    return max(min_tablas(p), round((p.n_postes - 1) * p.n_ranuras / 6))
+
+
+def desde_dimensiones(ancho_total: Optional[float] = None, alto_total: Optional[float] = None, **kw):
+    """Arma los parámetros a partir de las medidas totales del mueble.
+      - alto_total  -> el alto queda EXACTO: las n_ranuras indicadas se reparten entre la base
+                       (200 mm) y el remate (100 mm) con una separación uniforme que nunca baja de
+                       SEPARACION_MIN (110 mm). Si no se indica n_ranuras, se usa la mayor cantidad
+                       que respeta ese mínimo.
+      - ancho_total -> fija n_postes y luz; el ancho queda exacto. Si no se indica n_postes, se usa la
+                       MENOR cantidad de postes cuya luz no supere la máxima estructural luz_max(t)
+                       ('luz', si se indica, funciona como luz máxima deseada más baja).
+      - La profundidad total es la de las piezas (parámetro 'profundidad').
+      - Si no se pide n_tablas, se sugiere según el tamaño.
+    kw son los demás parámetros de Params (los que valen None se ignoran).
+    Devuelve (Params, notas, errores)."""
+    kw = {k: v for k, v in kw.items() if v is not None}
+    notas, errores = [], []
+    base = Params(**kw)
+    if ancho_total is None and alto_total is None:
+        return base, notas, errores
+    lim = limites_dimensiones(base.t, base.h, base.placa)
+    cambios = {}
+
+    if alto_total is not None:
+        t, h, w = base.t, base.h, base.t + base.h
+        nlo, nhi = LIMITES["n_ranuras"]
+        if "separacion" in kw:
+            notas.append("Se ignora 'separacion': la define el alto total.")
+        nmax = min(n_ranuras_max(alto_total, t, h), nhi)
+        if alto_total > largo_util(base.placa) + 1e-9:
+            errores.append(f"Alto total {alto_total:.0f} mm supera el largo útil de la placa "
+                           f"({largo_util(base.placa):.0f} mm).")
+        elif nmax < nlo:
+            errores.append(f"Alto total {alto_total:.0f} mm demasiado bajo: el mínimo es "
+                           f"{lim['alto_min']:.0f} mm ({nlo} ranuras con {SEPARACION_MIN:.0f} mm entre ellas).")
+        else:
+            n = kw.get("n_ranuras", nmax)
+            if n > nmax:
+                errores.append(f"Con {n} ranuras la separación sería "
+                               f"{separacion_para(alto_total, n, t, h):.1f} mm, menor al mínimo de "
+                               f"{SEPARACION_MIN:.0f} mm. Para {alto_total:.0f} mm entran como máximo {nmax} "
+                               f"ranuras (o hacen falta {altura_con(n, t, h, SEPARACION_MIN):.0f} mm para {n}).")
+            elif n < 2:
+                errores.append("Hacen falta al menos 2 ranuras.")
+            else:
+                sep = separacion_para(alto_total, n, t, h)
+                cambios["n_ranuras"], cambios["separacion"] = n, sep
+                sl = base.sep_min * (sep + w) - t
+                origen = "indicadas" if "n_ranuras" in kw else f"las máximas que respetan los {SEPARACION_MIN:.0f} mm"
+                notas.append(f"Alto {alto_total:.0f} mm exacto: {n} ranuras ({origen}), separación de "
+                             f"{sep:.1f} mm entre ranuras; espacio libre entre tablas a {base.sep_min} "
+                             f"ranuras: {sl:.0f} mm. Máximo para este alto: {nmax} ranuras.")
+
+    if ancho_total is not None:
+        t = base.t
+        entre = ancho_total - 2 * VOLADIZO          # ancho entre las caras exteriores de los postes extremos
+        plo, phi = LIMITES["n_postes"]
+        lmax = luz_max(t)
+        tope = lmax
+        if "luz" in kw:
+            tope = min(kw["luz"], lmax)
+            if kw["luz"] > lmax:
+                notas.append(f"'luz' pedida ({kw['luz']:.0f} mm) supera la máxima estructural: se usa {lmax:.0f} mm.")
+            else:
+                notas.append(f"'luz' se toma como luz máxima deseada ({kw['luz']:.0f} mm).")
+
+        def luz_para(n):
+            return (entre - n * t) / (n - 1)
+        if "n_postes" in kw:
+            n = kw["n_postes"]
+            notas.append(f"Con {n} postes indicados, la luz se ajusta para llegar al ancho pedido.")
+            validos = [n] if plo <= n <= phi and LUZ_MIN - 1e-9 <= luz_para(n) <= lmax + 1e-9 else []
+        else:
+            validos = [k for k in range(plo, phi + 1) if LUZ_MIN - 1e-9 <= luz_para(k) <= tope + 1e-9]
+        if not validos:
+            # anchos posibles más cercanos (por debajo y por encima)
+            bordes = []
+            for k in range(plo, phi + 1):
+                if tope >= LUZ_MIN:
+                    bordes += [(k * t + (k - 1) * LUZ_MIN + 2 * VOLADIZO, k), (k * t + (k - 1) * tope + 2 * VOLADIZO, k)]
+            abajo = max((x for x in bordes if x[0] < ancho_total), default=None)
+            arriba = min((x for x in bordes if x[0] > ancho_total), default=None)
+            msg = (f"Ancho total {ancho_total:.0f} mm no se puede lograr con luces entre {LUZ_MIN:.0f} y "
+                   f"{tope:.0f} mm")
+            if "n_postes" in kw:
+                msg += f" y {kw['n_postes']} postes (la luz saldría {luz_para(kw['n_postes']):.0f} mm)"
+            msg += "."
+            alt = []
+            if abajo:
+                alt.append(f"{abajo[0]:.0f} mm ({abajo[1]} postes)")
+            if arriba:
+                alt.append(f"{arriba[0]:.0f} mm ({arriba[1]} postes)")
+            if alt and "n_postes" not in kw:
+                msg += " Los anchos posibles más cercanos son " + " y ".join(alt) + "."
+            errores.append(msg)
+        else:
+            n = min(validos)                              # la menor cantidad de postes que cumple
+            cambios["n_postes"], cambios["luz"] = n, luz_para(n)
+            notas.append(f"Ancho pedido {ancho_total:.0f} mm -> {n} postes (la menor cantidad con luz <= "
+                         f"{tope:.0f} mm), luz de {luz_para(n):.1f} mm, ancho exacto. Luz máxima estructural: "
+                         f"{lmax:.0f} mm (flecha estimada {flecha_final(luz_para(n), t):.1f} mm).")
+
+    if errores:
+        return base, notas, errores
+    p = replace(base, **cambios)
+    if "n_tablas" not in kw:
+        p.n_tablas = n_tablas_sugerido(p)
+        notas.append(f"Tablas: {p.n_tablas} (sugerido por el tamaño; mínimo {min_tablas(p)}).")
+    return p, notas, errores
+
+
+# ----------------------------------------------------------------------------
+# Ensamblado: dónde va cada pieza en el espacio 3D
+# ----------------------------------------------------------------------------
+@dataclass
+class Instancia:
+    """Una pieza colocada en el mueble.
+    El contorno 2D (x, y) se ubica con: punto = origen + x*eje_x + y*eje_y,
+    y se extruye 'extrusion' (vector) para darle el espesor."""
+    nombre: str
+    tipo: str
+    pieza: str                  # nombre de la Pieza (contorno) que usa
+    origen: Tuple[float, float, float]
+    eje_x: Tuple[float, float, float]
+    eje_y: Tuple[float, float, float]
+    extrusion: Tuple[float, float, float]
+
+
+def instancias(p: Params) -> List[Instancia]:
+    """Lista de todas las piezas colocadas (4 postes + N tablas).
+    Ejes del mueble: X = profundidad (0 atrás, 200 frente),
+    Y = a lo largo del mueble, Z = altura."""
+    err = validar(p)
+    if err:
+        raise ValueError("Parámetros inválidos:\n- " + "\n- ".join(err))
+    out = []
+    for k in range(p.n_postes):
+        out.append(Instancia(f"poste_{k + 1}", "poste", "poste",
+                             (0.0, pos_poste(p, k), 0.0),
+                             (1, 0, 0), (0, 0, 1), (0, p.t, 0)))
+    for i, tb in enumerate(tablas_efectivas(p)[0]):
+        n = tb.poste_fin - tb.poste_ini + 1
+        z0 = z_ranura(p, tb.ranura)
+        y0 = pos_poste(p, tb.poste_ini) - VOLADIZO
+        out.append(Instancia(f"tabla_{i + 1}", "tabla", f"tabla_{n}_postes",
+                             (0.0, y0, z0),
+                             (1, 0, 0), (0, 1, 0), (0, 0, p.t)))
+    return out
+
+
+if __name__ == "__main__":
+    p = Params()
+    for pz in generar_piezas(p):
+        print(f"{pz.nombre:18s} x{pz.cantidad}  {pz.ancho:.0f} x {pz.largo:.0f} x {pz.espesor:.1f}"
+              f"  área {area(pz.contorno):.0f} mm²")
+    print(resumen(p))
+</script>
+<script type="text/plain" id="py_herrajes">"""
+herrajes.py
+-----------
+Herrajes de anclaje a la pared y herramientas para fabricarlos e instalarlos. Está separado de
+biblioteca_param.py para mantener el orden: ahí queda solo el diseño del mueble (postes, tablas,
+anclajes en el poste); acá todo lo que rodea a la escuadra en U.
+
+Contiene
+  - dimensiones_u():     medidas de la escuadra en U para encargarla a un taller de chapa
+  - plantilla_router():  plantilla de MDF para hacer a mano, con router y buje guía, el rebaje de la
+                         cara opuesta del poste (placa con ventana + 2 topes con llave)
+  - plantilla_3d():      modelo 3D de esa plantilla (armada sobre un poste de ejemplo y despiezada)
+  - regla_replanteo():   regla(s) de MDF para marcar en la pared el tornillo de cada escuadra
+  - tabla_replanteo():   coordenadas de esas marcas
+  - escuadras_3d():      escuadras en U ya colocadas en el mueble armado
+
+Depende de biblioteca_param.py (no al revés). Python puro, sin dependencias.
+"""
+import math
+
+from biblioteca_param import (Params, Pieza, anclajes, alto_muesca, mecanizados_poste,
+                              largo_util, pos_poste, ANCLAJE_HOLGURA, _zona_escuadra, _rect, _circulo)
+
+# ----------------------------------------------------------------------------
+# Plantilla y regla de replanteo (se cortan en MDF aparte, no en la multiplaca)
+# ----------------------------------------------------------------------------
+PLANTILLA_ESPESOR = 12.0       # MDF de la plantilla del router
+PLANTILLA_MARGEN = 25.0        # material de la plantilla alrededor de la ventana
+TOPE_ANCHO = 10.0              # ancho del tope de la plantilla (apoya en el canto trasero del poste)
+LLAVE_HOLGURA = 0.3            # holgura de la llave del tope dentro de la muesca trasera (en alto y en profundidad)
+REGLA_ESPESOR = 6.0            # MDF de la regla de replanteo
+REGLA_ALTO = 50.0              # alto de la regla de replanteo
+REGLA_MARGEN = 40.0            # sobrante en cada extremo de la regla
+MARCA_RADIO = 2.0              # radio de los agujeros de marcado de la regla (Ø4)
+
+
+def dimensiones_u(p: Params) -> dict:
+    """Medidas de la escuadra en U para encargarla a un taller de chapa. Los brazos van embutidos en los
+    rebajes (quedan a ras de las caras) y la base contra la pared va en la muesca trasera.
+    Todas las medidas dependen de los parámetros; el ancho interior sale del espesor REAL de la placa."""
+    e = p.anclaje_espesor
+    return {"chapa": e, "alto": p.anclaje_alto, "largo_brazos": p.anclaje_ancho,
+            "ancho_exterior": p.t,                          # = espesor de la placa (profundidad de la escuadra)
+            "ancho_interior": p.t - 2 * e + p.holgura_u,    # núcleo de madera entre los rebajes + holgura
+            "nucleo": p.t - 2 * e,
+            "diametro_agujero_brazos": 2 * p.agujero_radio,
+            "centro_agujero_desde_pared": p.anclaje_ancho / 2,
+            "radio_puntas_min": p.fresa_manual / 2.0}
+
+
+def plantilla_router(p: Params) -> list:
+    """Plantilla (MDF) para hacer a mano, con router y buje guía, el rebaje de la cara opuesta del poste.
+    Se cortan: 1 placa con la ventana + 2 topes con llave (uno por cada cara, así la misma plantilla sirve
+    dada vuelta). Coordenadas en el plano del poste (x = profundidad con el canto trasero en x = 0) y
+    centradas en el alto de la escuadra (z = 0).
+    Cómo se ubica en el poste, sin necesidad del agujero pasante:
+      - en profundidad: el tope apoya contra el canto trasero del poste (x = 0);
+      - en altura: la llave del tope, una lengüeta, entra en la muesca trasera que corta la CNC;
+      - la placa apoya sobre la cara del poste.
+    Ventana = rebaje agrandado en (buje - fresa manual) / 2 por cada lado."""
+    if not anclajes(p):
+        return []
+    e = p.anclaje_espesor
+    off = (p.buje - p.fresa_manual) / 2.0
+    a = anclajes(p)[0]
+    _, x0, x1, z0, z1 = _zona_escuadra(p, a)
+    h2 = (z1 - z0) / 2
+    ventana = _rect(x0 - off, -h2 - off, x1 + off, h2 + off)
+    placa_x0, placa_x1 = -TOPE_ANCHO, x1 + off + PLANTILLA_MARGEN
+    placa_z = h2 + off + PLANTILLA_MARGEN
+    placa = Pieza("plantilla_router", "plantilla", _rect(placa_x0, -placa_z, placa_x1, placa_z), PLANTILLA_ESPESOR, 1,
+                  placa_x1 - placa_x0, 2 * placa_z,
+                  huecos=[{"tipo": "ventana", "contorno": ventana, "offset": off}], material="MDF")
+    tz = alto_muesca(p) / 2 - LLAVE_HOLGURA / 2          # medio alto de la llave
+    tl = e - LLAVE_HOLGURA                                 # cuánto entra la llave en la muesca
+    contorno_tope = [(-TOPE_ANCHO, -placa_z, 0.0), (0.0, -placa_z, 0.0), (0.0, -tz, 0.0), (tl, -tz, 0.0),
+                     (tl, tz, 0.0), (0.0, tz, 0.0), (0.0, placa_z, 0.0), (-TOPE_ANCHO, placa_z, 0.0)]
+    tope = Pieza("tope_plantilla", "plantilla", contorno_tope, PLANTILLA_ESPESOR, 2,
+                 TOPE_ANCHO + tl, 2 * placa_z, material="MDF")
+    return [placa, tope]
+
+
+def plantilla_3d(p: Params, explotada: bool = False) -> dict:
+    """Modelo 3D de la plantilla, para poder visualizarla. Devuelve dos grupos de prismas
+    {nombre, contorno, huecos, y0, y1}, en coordenadas del poste: x = profundidad (canto trasero en x = 0),
+    z centrada en el alto de la escuadra, y = espesor (el poste ocupa y de 0 a t).
+      - 'plantilla': placa de MDF con su ventana + los dos topes con llave. Se apoya en la cara -Y del poste
+        (la que se rebaja a mano). El tope 'en uso' queda contra el canto trasero con su llave dentro de la
+        muesca; el otro tope queda del lado de afuera y pasa a ser el de uso al dar vuelta la plantilla.
+      - 'referencia': un trozo de poste (con la muesca trasera, el rebaje ya hecho y el agujero pasante), el
+        volumen del rebaje (donde entra el brazo de la escuadra), y el buje con la fresa del router.
+    Con explotada=True las piezas de la plantilla se separan en y para verlas por separado."""
+    if not anclajes(p):
+        return {"plantilla": [], "referencia": []}
+    placa, tope = plantilla_router(p)
+    t, e, E = p.t, p.anclaje_espesor, PLANTILLA_ESPESOR
+    ventana = [h for h in placa.huecos if h["tipo"] == "ventana"][0]["contorno"]
+    x_fin = max(x for x, z, b in placa.contorno)
+    Zp = placa.largo / 2
+    d = dict(placa=-45.0, tope_uso=-20.0, tope_otro=-75.0) if explotada else dict(placa=0.0, tope_uso=0.0, tope_otro=0.0)
+    plantilla = [
+        {"nombre": "placa", "contorno": placa.contorno, "huecos": [ventana], "y0": -E + d["placa"], "y1": d["placa"]},
+        {"nombre": "tope_en_uso", "contorno": tope.contorno, "huecos": [], "y0": d["tope_uso"], "y1": E + d["tope_uso"]},
+        {"nombre": "tope_otra_cara", "contorno": tope.contorno, "huecos": [], "y0": -2 * E + d["tope_otro"], "y1": -E + d["tope_otro"]},
+    ]
+    # --- poste de ejemplo, con el rebaje de la cara -Y ya hecho
+    rm = p.fresa_manual / 2.0
+    a = anclajes(p)[0]
+    zc, x0, x1, z0, z1 = _zona_escuadra(p, a)
+    ph2, hn2 = (z1 - z0) / 2, alto_muesca(p) / 2
+    X, Z = x_fin + 15.0, Zp + 15.0
+    k = -math.tan(math.pi / 8)                                       # cuarto de círculo horario
+    con_rebaje = [(0, Z, 0), (0, hn2, 0), (e, hn2, 0), (e, ph2, 0), (x1 - rm, ph2, k), (x1, ph2 - rm, 0),
+                  (x1, -ph2 + rm, k), (x1 - rm, -ph2, 0), (e, -ph2, 0), (e, -hn2, 0), (0, -hn2, 0),
+                  (0, -Z, 0), (X, -Z, 0), (X, Z, 0)]
+    solo_muesca = [(0, Z, 0), (0, hn2, 0), (e, hn2, 0), (e, -hn2, 0), (0, -hn2, 0), (0, -Z, 0), (X, -Z, 0), (X, Z, 0)]
+    xc = p.anclaje_ancho / 2
+    man = [m for m in mecanizados_poste(p) if m["manual"] and m["anclaje"] == a["nombre"]][0]
+    rebaje = [(x, z - zc, b) for x, z, b in man["contorno"]]
+    xb = x1 - rm                                                       # buje apoyado en el extremo de la ventana
+    referencia = [
+        {"nombre": "poste_capa_con_rebaje", "contorno": con_rebaje, "huecos": [], "y0": 0.0, "y1": e},
+        {"nombre": "poste_capa_maciza", "contorno": solo_muesca, "huecos": [_circulo(xc, 0.0, p.agujero_radio)], "y0": e, "y1": t},
+        {"nombre": "volumen_rebaje", "contorno": rebaje, "huecos": [], "y0": 0.0, "y1": e},
+        {"nombre": "buje", "contorno": _circulo(xb, 0.0, p.buje / 2), "huecos": [], "y0": -E - 8.0, "y1": -2.0},
+        {"nombre": "fresa", "contorno": _circulo(xb, 0.0, rm), "huecos": [], "y0": -E - 30.0, "y1": e},
+    ]
+    return {"plantilla": plantilla, "referencia": referencia}
+
+
+def tabla_replanteo(p: Params) -> list:
+    """Coordenadas para marcar en la pared el tornillo de la base de cada escuadra. Eje y desde la cara
+    izquierda del primer poste (las tablas sobresalen 100 mm más a la izquierda); eje z desde el piso."""
+    pas = p.t + p.luz
+    return [{"poste": k, "y_centro": k * pas + p.t / 2, "y_cara_izq": k * pas,
+             **{f"z_{a['nombre']}": (a["z_ini"] + a["z_fin"]) / 2 for a in anclajes(p)}}
+            for k in range(p.n_postes)]
+
+
+def regla_replanteo(p: Params) -> list:
+    """Regla(s) de MDF para replantear en la pared las escuadras. Una tira con un agujero de marcado
+    (Ø4) en el centro de cada poste, cuyo eje queda a la altura de la escuadra. Si el mueble es más
+    largo que la placa se parte en tramos que comparten un poste (se hace coincidir el agujero)."""
+    if not anclajes(p):
+        return []
+    pas = p.t + p.luz
+    por_tramo = max(2, int((largo_util(p.placa) - 2 * REGLA_MARGEN) // pas) + 1)
+    out, k0 = [], 0
+    while k0 < p.n_postes - 1:
+        k1 = min(k0 + por_tramo - 1, p.n_postes - 1)
+        largo = (k1 - k0) * pas + 2 * REGLA_MARGEN
+        hu = [{"tipo": "marca", "poste": k, "centro": (REGLA_ALTO / 2, REGLA_MARGEN + (k - k0) * pas),
+               "radio": MARCA_RADIO, "contorno": _circulo(REGLA_ALTO / 2, REGLA_MARGEN + (k - k0) * pas, MARCA_RADIO),
+               "pasante": True} for k in range(k0, k1 + 1)]
+        out.append(Pieza(f"regla_replanteo_{len(out) + 1}", "regla", _rect(0, 0, REGLA_ALTO, largo), REGLA_ESPESOR, 1,
+                         REGLA_ALTO, largo, huecos=hu, material="MDF"))
+        k0 = k1
+    return out
+
+
+def escuadras_3d(p: Params) -> list:
+    """Cajas (x0, y0, z0, x1, y1, z1) de las escuadras en U ya colocadas en el mueble armado: una base
+    contra la pared (dentro de la muesca) y dos brazos embutidos en los rebajes, en cada poste y nivel."""
+    e, t = p.anclaje_espesor, p.t
+    out = []
+    for k in range(p.n_postes):
+        y0 = pos_poste(p, k)
+        for a in anclajes(p):
+            zc, h2 = (a["z_ini"] + a["z_fin"]) / 2, p.anclaje_alto / 2
+            base = dict(poste=k, anclaje=a["nombre"])
+            out.append({**base, "tipo": "base", "caja": (0.0, y0, zc - h2, e, y0 + t, zc + h2)})
+            out.append({**base, "tipo": "brazo_opuesto", "caja": (e, y0, zc - h2, p.anclaje_ancho, y0 + e, zc + h2)})
+            out.append({**base, "tipo": "brazo_corte", "caja": (e, y0 + t - e, zc - h2, p.anclaje_ancho, y0 + t, zc + h2)})
+    return out
+</script>
+<script type="text/plain" id="py_nesting">"""
+nesting.py
+----------
+Acomoda las piezas de la biblioteca dentro de placas, respetando la veta (las piezas
+no se rotan), y lleva el inventario de placas y sobrantes reutilizables.
+
+Python puro, sin dependencias externas. Usa biblioteca_param.py.
+
+Coordenadas de la placa (en mm)
+  u = a lo largo de la placa (dirección de la veta, 2440)
+  v = a lo ancho de la placa (1220)
+Una pieza (largo L, profundidad 200) se coloca con su largo sobre u y su
+profundidad sobre v. Se la gira 90° (sin espejar) respecto de su contorno original.
+
+Flujo
+  1. inv = Inventario.cargar("inventario.json")   (vacío si no existe)
+  2. plan = planificar(piezas_para_nesting(p), inv, p, cfg)   (NO modifica el inventario)
+  3. confirmar(inv, plan, "PED-001")   (descuenta placas usadas, agrega sobrantes)
+  4. inv.guardar("inventario.json")
+"""
+import json
+import math
+import os
+import random
+from dataclasses import dataclass, field, asdict
+from datetime import datetime
+from typing import List, Optional, Tuple
+
+import biblioteca_param as bp
+
+Rect = Tuple[float, float, float, float]  # (u, v, ancho_u, alto_v)
+EPS = 1e-6
+
+
+# ----------------------------------------------------------------------------
+# Configuración (valores PROVISORIOS hasta definir la máquina)
+# ----------------------------------------------------------------------------
+@dataclass
+class ConfigNesting:
+    fresa: float = 6.0               # diámetro de la fresa (mm)
+    sep_extra: float = 2.0           # luz adicional entre piezas, además del diámetro de la fresa
+    margen_sobrante: float = 5.0     # margen de seguridad en los bordes de un sobrante
+    sobrante_min_largo: float = 500.0  # un sobrante se guarda solo si mide al menos esto a lo largo de la veta...
+    sobrante_min_ancho: float = 210.0  # ...y esto a lo ancho (una pieza de 200 + márgenes)
+    intentos: int = 40               # órdenes aleatorios probados además de los básicos
+    semilla: int = 1
+    tol_espesor: float = 0.2         # diferencia de espesor tolerada para reutilizar un sobrante
+
+    @property
+    def sep(self) -> float:
+        """Distancia mínima entre piezas: lo que ocupa la fresa más una luz."""
+        return self.fresa + self.sep_extra
+
+
+# ----------------------------------------------------------------------------
+# Piezas para acomodar
+# ----------------------------------------------------------------------------
+@dataclass
+class PiezaNesting:
+    id: str
+    nombre: str
+    du: float          # largo (sobre la veta)
+    dv: float          # profundidad (a lo ancho)
+    contorno: list
+    area: float
+    mecanizados: list = field(default_factory=list)   # rebajes (profundidad parcial)
+    huecos: list = field(default_factory=list)        # agujeros pasantes
+
+
+def piezas_para_nesting(p: "bp.Params") -> List[PiezaNesting]:
+    out = []
+    for pz in bp.generar_piezas(p):
+        a = bp.area(pz.contorno)
+        for k in range(1, pz.cantidad + 1):
+            out.append(PiezaNesting(f"{pz.nombre}#{k}", pz.nombre, pz.largo, pz.ancho, pz.contorno, a,
+                                    pz.mecanizados, pz.huecos))
+    return out
+
+
+def contorno_colocado(contorno, u0: float, v0: float, dv: float):
+    """Contorno de la pieza en coordenadas de la placa (rotación de 90°, sin espejo)."""
+    return [(u0 + y, v0 + dv - x, b) for (x, y, b) in contorno]
+
+
+# ----------------------------------------------------------------------------
+# Empaquetado MaxRects (sin rotación)
+# ----------------------------------------------------------------------------
+def _intersecta(a: Rect, b: Rect) -> bool:
+    return (a[0] < b[0] + b[2] - EPS and a[0] + a[2] > b[0] + EPS and
+            a[1] < b[1] + b[3] - EPS and a[1] + a[3] > b[1] + EPS)
+
+
+def _contiene(a: Rect, b: Rect) -> bool:
+    """¿a contiene a b?"""
+    return (a[0] <= b[0] + EPS and a[1] <= b[1] + EPS and
+            a[0] + a[2] >= b[0] + b[2] - EPS and a[1] + a[3] >= b[1] + b[3] - EPS)
+
+
+def _podar(rects: List[Rect]) -> List[Rect]:
+    res = []
+    for i, r in enumerate(rects):
+        if r[2] <= EPS or r[3] <= EPS:
+            continue
+        if any(i != j and _contiene(o, r) and (not _contiene(r, o) or j < i)
+               for j, o in enumerate(rects) if o[2] > EPS and o[3] > EPS):
+            continue
+        res.append(r)
+    return res
+
+
+class MaxRects:
+    def __init__(self, ancho: float, alto: float):
+        self.libres: List[Rect] = [(0.0, 0.0, ancho, alto)]
+
+    @staticmethod
+    def _puntaje(r: Rect, w: float, h: float, heur: str):
+        sobra_u, sobra_v = r[2] - w, r[3] - h
+        if heur == "bssf":
+            return (min(sobra_u, sobra_v), max(sobra_u, sobra_v))
+        if heur == "blsf":
+            return (max(sobra_u, sobra_v), min(sobra_u, sobra_v))
+        return (r[0] + w, r[1])          # "bl": el que termina antes a lo largo de la veta
+
+    def insertar(self, w: float, h: float, heur: str):
+        mejor = None
+        for r in self.libres:
+            if w <= r[2] + EPS and h <= r[3] + EPS:
+                sc = self._puntaje(r, w, h, heur)
+                if mejor is None or sc < mejor[0]:
+                    mejor = (sc, r[0], r[1])
+        if mejor is None:
+            return None
+        _, x, y = mejor
+        self._colocar((x, y, w, h))
+        return x, y
+
+    def _colocar(self, a: Rect):
+        nuevos = []
+        for r in self.libres:
+            if not _intersecta(r, a):
+                nuevos.append(r)
+                continue
+            if a[0] > r[0]:
+                nuevos.append((r[0], r[1], a[0] - r[0], r[3]))
+            if a[0] + a[2] < r[0] + r[2]:
+                nuevos.append((a[0] + a[2], r[1], r[0] + r[2] - (a[0] + a[2]), r[3]))
+            if a[1] > r[1]:
+                nuevos.append((r[0], r[1], r[2], a[1] - r[1]))
+            if a[1] + a[3] < r[1] + r[3]:
+                nuevos.append((r[0], a[1] + a[3], r[2], r[1] + r[3] - (a[1] + a[3])))
+        self.libres = _podar(nuevos)
+
+
+# ----------------------------------------------------------------------------
+# Sobrantes: descomposición del espacio libre en rectángulos disjuntos
+# ----------------------------------------------------------------------------
+def _restar(r: Rect, a: Rect) -> List[Rect]:
+    if not _intersecta(r, a):
+        return [r]
+    res = []
+    if a[0] > r[0]:
+        res.append((r[0], r[1], a[0] - r[0], r[3]))
+    if a[0] + a[2] < r[0] + r[2]:
+        res.append((a[0] + a[2], r[1], r[0] + r[2] - (a[0] + a[2]), r[3]))
+    x0, x1 = max(r[0], a[0]), min(r[0] + r[2], a[0] + a[2])
+    if a[1] > r[1]:
+        res.append((x0, r[1], x1 - x0, a[1] - r[1]))
+    if a[1] + a[3] < r[1] + r[3]:
+        res.append((x0, a[1] + a[3], x1 - x0, r[1] + r[3] - (a[1] + a[3])))
+    return [q for q in res if q[2] > EPS and q[3] > EPS]
+
+
+def descomponer_libres(libres: List[Rect], U: float, V: float, min_u: float, min_v: float) -> List[Rect]:
+    """Rectángulos disjuntos aprovechables dentro del área útil [0,U]x[0,V]."""
+    cands = []
+    for (x, y, w, h) in libres:
+        w2, h2 = min(x + w, U) - x, min(y + h, V) - y   # recorta lo que sobresale del área útil
+        if w2 > EPS and h2 > EPS:
+            cands.append((x, y, w2, h2))
+    elegidos = []
+    while cands:
+        cands.sort(key=lambda r: r[2] * r[3], reverse=True)
+        r = cands.pop(0)
+        if r[2] + EPS < min_u or r[3] + EPS < min_v:
+            continue
+        elegidos.append(r)
+        nuevos = []
+        for c in cands:
+            nuevos += _restar(c, r)
+        cands = nuevos
+    return elegidos
+
+
+# ----------------------------------------------------------------------------
+# Inventario
+# ----------------------------------------------------------------------------
+@dataclass
+class Item:
+    id: str
+    tipo: str            # "placa" | "sobrante"
+    material: str        # código de la placa (p. ej. MAB15244)
+    espesor: float
+    largo: float         # a lo largo de la veta
+    ancho: float
+    estado: str = "disponible"   # "disponible" | "usado"
+    origen: str = ""             # "compra" o "PEDIDO:fuente" si es un sobrante
+    usado_en: str = ""
+
+
+class Inventario:
+    def __init__(self, items: Optional[List[Item]] = None, pedidos: Optional[list] = None,
+                 contadores: Optional[dict] = None):
+        self.items: List[Item] = items or []
+        self.pedidos: list = pedidos or []
+        self.contadores: dict = contadores or {"P": 0, "S": 0}
+
+    # --- persistencia
+    @classmethod
+    def cargar(cls, ruta: str) -> "Inventario":
+        if not ruta or not os.path.exists(ruta):
+            return cls()
+        with open(ruta, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        return cls([Item(**i) for i in d.get("items", [])], d.get("pedidos", []),
+                   d.get("contadores", {"P": 0, "S": 0}))
+
+    def guardar(self, ruta: str):
+        d = {"items": [asdict(i) for i in self.items], "pedidos": self.pedidos,
+             "contadores": self.contadores}
+        tmp = ruta + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, ruta)
+
+    # --- operaciones
+    def _nuevo_id(self, prefijo: str) -> str:
+        self.contadores[prefijo] = self.contadores.get(prefijo, 0) + 1
+        return f"{prefijo}-{self.contadores[prefijo]:04d}"
+
+    def agregar_placas(self, placa: "bp.Placa", cantidad: int, origen: str = "compra") -> List[str]:
+        ids = []
+        for _ in range(cantidad):
+            it = Item(self._nuevo_id("P"), "placa", placa.codigo, placa.espesor_real,
+                      placa.largo, placa.ancho, origen=origen)
+            self.items.append(it)
+            ids.append(it.id)
+        return ids
+
+    def agregar_sobrante(self, material: str, espesor: float, largo: float, ancho: float, origen: str) -> Item:
+        it = Item(self._nuevo_id("S"), "sobrante", material, espesor, largo, ancho, origen=origen)
+        self.items.append(it)
+        return it
+
+    def disponibles(self, material: str, espesor: float, tol: float):
+        """(sobrantes, placas) disponibles del material y espesor pedidos."""
+        ok = [i for i in self.items if i.estado == "disponible" and i.material == material
+              and abs(i.espesor - espesor) <= tol]
+        return ([i for i in ok if i.tipo == "sobrante"], [i for i in ok if i.tipo == "placa"])
+
+    def resumen(self) -> str:
+        disp = [i for i in self.items if i.estado == "disponible"]
+        placas = [i for i in disp if i.tipo == "placa"]
+        sob = [i for i in disp if i.tipo == "sobrante"]
+        lineas = [f"Inventario: {len(placas)} placa(s) enteras y {len(sob)} sobrante(s) disponibles"]
+        for i in sorted(sob, key=lambda x: -x.largo * x.ancho):
+            lineas.append(f"  {i.id}  sobrante {i.largo:.0f} x {i.ancho:.0f} mm  ({i.material}, "
+                          f"{i.espesor:g} mm)  de {i.origen}")
+        return "\n".join(lineas)
+
+
+# ----------------------------------------------------------------------------
+# Plan de corte
+# ----------------------------------------------------------------------------
+@dataclass
+class Colocacion:
+    id: str
+    nombre: str
+    u: float            # esquina inferior izquierda, coordenadas físicas de la placa
+    v: float
+    du: float
+    dv: float
+
+
+@dataclass
+class HojaPlan:
+    fuente: str                   # "sobrante" | "placa" | "nueva"
+    item_id: Optional[str]
+    largo: float
+    ancho: float
+    margen: float
+    colocaciones: List[Colocacion] = field(default_factory=list)
+    sobrantes: List[Rect] = field(default_factory=list)   # rectángulos nuevos aprovechables (coord. físicas)
+    area_piezas: float = 0.0
+
+
+@dataclass
+class Plan:
+    hojas: List[HojaPlan]
+    material: str
+    espesor: float
+    cfg: ConfigNesting
+    contornos: dict = field(default_factory=dict)   # nombre de pieza -> contorno
+    mecanizados: dict = field(default_factory=dict) # nombre de pieza -> rebajes (profundidad parcial)
+    huecos: dict = field(default_factory=dict)      # nombre de pieza -> agujeros pasantes
+
+    @property
+    def placas_nuevas(self) -> int:
+        return sum(1 for h in self.hojas if h.fuente == "nueva")
+
+    @property
+    def placas_inventario(self) -> int:
+        return sum(1 for h in self.hojas if h.fuente == "placa")
+
+    @property
+    def sobrantes_usados(self) -> int:
+        return sum(1 for h in self.hojas if h.fuente == "sobrante")
+
+    @property
+    def sobrantes_nuevos(self) -> List[Tuple[int, Rect]]:
+        return [(i, r) for i, h in enumerate(self.hojas) for r in h.sobrantes]
+
+    @property
+    def aprovechamiento(self) -> float:
+        a = sum(h.largo * h.ancho for h in self.hojas)
+        return sum(h.area_piezas for h in self.hojas) / a if a else 0.0
+
+
+def _empacar(orden, fuentes, heur, cfg: ConfigNesting, placa: "bp.Placa"):
+    """Devuelve una lista de (fuente, MaxRects, colocaciones[(pieza, x, y)]) o lanza ValueError."""
+    sep = cfg.sep
+    restantes = list(orden)
+    usos = []
+
+    def llenar(fuente):
+        nonlocal restantes
+        U, V = fuente.largo - 2 * fuente.margen, fuente.ancho - 2 * fuente.margen
+        mr = MaxRects(U + sep, V + sep)
+        cols, sig = [], []
+        for pz in restantes:
+            pos = mr.insertar(pz.du + sep, pz.dv + sep, heur)
+            (cols if pos else sig).append((pz, pos) if pos else pz)
+        if cols:
+            usos.append((fuente, mr, cols))
+            restantes = sig
+        return bool(cols)
+
+    for f in fuentes:
+        if not restantes:
+            break
+        llenar(f)
+    while restantes:
+        f = HojaPlan("nueva", None, placa.largo, placa.ancho, placa.margen_borde)
+        if not llenar(f):
+            raise ValueError("Una pieza no entra en una placa entera: revisá las medidas.")
+    return usos
+
+
+def planificar(piezas: List[PiezaNesting], inv: Inventario, p: "bp.Params",
+               cfg: Optional[ConfigNesting] = None) -> Plan:
+    """Plan de corte que usa primero los sobrantes, luego las placas del inventario y,
+    si no alcanza, placas nuevas. No modifica el inventario."""
+    cfg = cfg or ConfigNesting(fresa=p.fresa)
+    placa = p.placa
+    min_ancho = max(cfg.sobrante_min_ancho, p.profundidad + 2 * cfg.margen_sobrante)
+    sobrantes, placas = inv.disponibles(placa.codigo, p.t, cfg.tol_espesor)
+    fuentes = ([HojaPlan("sobrante", i.id, i.largo, i.ancho, cfg.margen_sobrante)
+                for i in sorted(sobrantes, key=lambda x: x.largo * x.ancho)] +
+               [HojaPlan("placa", i.id, i.largo, i.ancho, placa.margen_borde) for i in placas])
+
+    rnd = random.Random(cfg.semilla)
+    ordenes = [sorted(piezas, key=lambda z: (-z.du, -z.dv)),
+               sorted(piezas, key=lambda z: (-z.du * z.dv, -z.du)),
+               sorted(piezas, key=lambda z: (-z.dv, -z.du))]
+    for _ in range(cfg.intentos):
+        ordenes.append(sorted(piezas, key=lambda z: -z.du * (0.7 + 0.6 * rnd.random())))
+
+    # Se prueban dos estrategias: con los sobrantes disponibles y sin ellos. Gana la que
+    # compra menos placas; a igualdad, la que gasta menos placas enteras y menos material.
+    mejor, mejor_sc = None, None
+    variantes = [fuentes]
+    if sobrantes and placas:
+        variantes.append([f for f in fuentes if f.fuente != "sobrante"])
+    for fuentes_v in variantes:
+        for orden in ordenes:
+            for heur in ("bssf", "blsf", "bl"):
+                try:
+                    usos = _empacar(orden, [HojaPlan(f.fuente, f.item_id, f.largo, f.ancho, f.margen)
+                                            for f in fuentes_v], heur, cfg, placa)
+                except ValueError:
+                    continue
+                nuevas = sum(1 for f, _, _ in usos if f.fuente == "nueva")
+                enteras = sum(1 for f, _, _ in usos if f.fuente == "placa")
+                area = sum(f.largo * f.ancho for f, _, _ in usos)
+                sc = (nuevas, enteras, area)
+                if mejor_sc is None or sc < mejor_sc:
+                    mejor, mejor_sc = usos, sc
+    if mejor is None:
+        raise ValueError("No se pudo armar el plan de corte.")
+
+    hojas = []
+    for f, mr, cols in mejor:
+        m = f.margen
+        U, V = f.largo - 2 * m, f.ancho - 2 * m
+        for pz, (x, y) in cols:
+            f.colocaciones.append(Colocacion(pz.id, pz.nombre, m + x, m + y, pz.du, pz.dv))
+            f.area_piezas += pz.area
+        # Espacio libre con la separación de la fresa en TODOS los lados de cada pieza
+        # (para poder cortar el sobrante sin tocar las piezas).
+        sep = cfg.sep
+        mr2 = MaxRects(U, V)
+        for pz, (x, y) in cols:
+            mr2._colocar((x - sep, y - sep, pz.du + 2 * sep, pz.dv + 2 * sep))
+        libres = descomponer_libres(mr2.libres, U, V, cfg.sobrante_min_largo, min_ancho)
+        f.sobrantes = [(m + x, m + y, w, h) for (x, y, w, h) in libres]
+        hojas.append(f)
+    return Plan(hojas, placa.codigo, p.t, cfg, {pz.nombre: pz.contorno for pz in piezas},
+                {pz.nombre: pz.mecanizados for pz in piezas}, {pz.nombre: pz.huecos for pz in piezas})
+
+
+def columnas_por_placa(p: "bp.Params", cfg: Optional[ConfigNesting] = None) -> int:
+    """Cuántas columnas de piezas (de ancho = profundidad) entran a lo ancho de la placa."""
+    cfg = cfg or ConfigNesting(fresa=p.fresa)
+    util = bp.ancho_util(p.placa)
+    return max(0, int((util + cfg.sep) // (p.profundidad + cfg.sep)))
+
+
+def profundidad_max_para_columnas(placa: "bp.Placa", cfg: ConfigNesting, columnas: int) -> float:
+    """Mayor profundidad de pieza con la que entran 'columnas' columnas en la placa."""
+    return (bp.ancho_util(placa) - (columnas - 1) * cfg.sep) / columnas
+
+
+def verificar_plan(plan: Plan, piezas: List[PiezaNesting]) -> List[str]:
+    """Comprobaciones independientes del algoritmo: nada se pisa, nada sale de la placa,
+    respeta la separación y están todas las piezas exactamente una vez."""
+    err = []
+    ids = [c.id for h in plan.hojas for c in h.colocaciones]
+    if sorted(ids) != sorted(p.id for p in piezas):
+        err.append("Las piezas colocadas no coinciden con las pedidas.")
+    sep = plan.cfg.sep
+    for n, h in enumerate(plan.hojas, 1):
+        for c in h.colocaciones:
+            if (c.u < h.margen - EPS or c.v < h.margen - EPS or
+                    c.u + c.du > h.largo - h.margen + EPS or c.v + c.dv > h.ancho - h.margen + EPS):
+                err.append(f"Hoja {n}: {c.id} sale del área útil.")
+        cs = h.colocaciones
+        for i in range(len(cs)):
+            for j in range(i + 1, len(cs)):
+                a, b = cs[i], cs[j]
+                sep_u = max(b.u - (a.u + a.du), a.u - (b.u + b.du))
+                sep_v = max(b.v - (a.v + a.dv), a.v - (b.v + b.dv))
+                if max(sep_u, sep_v) < sep - 1e-4:
+                    err.append(f"Hoja {n}: {a.id} y {b.id} quedan a menos de {sep:.1f} mm.")
+        for (u, v, w, hh) in h.sobrantes:      # un sobrante no puede pisar una pieza ni quedar cerca
+            for c in cs:
+                sep_u = max(c.u - (u + w), u - (c.u + c.du))
+                sep_v = max(c.v - (v + hh), v - (c.v + c.dv))
+                if max(sep_u, sep_v) < sep - 1e-4:
+                    err.append(f"Hoja {n}: un sobrante queda a menos de {sep:.1f} mm de {c.id}.")
+    return err
+
+
+def texto_plan(plan: Plan, inv: Optional[Inventario] = None) -> List[str]:
+    lin = []
+    tot = len(plan.hojas)
+    lin.append(f"Nesting: {tot} hoja(s) en total | {plan.sobrantes_usados} sobrante(s) y "
+               f"{plan.placas_inventario} placa(s) del inventario | {plan.placas_nuevas} placa(s) a comprar")
+    lin.append(f"Aprovechamiento del material usado: {plan.aprovechamiento * 100:.1f} %  "
+               f"(fresa {plan.cfg.fresa:g} mm, separación entre piezas {plan.cfg.sep:g} mm)")
+    for n, h in enumerate(plan.hojas, 1):
+        etiqueta = {"nueva": "placa nueva", "placa": f"placa {h.item_id}",
+                    "sobrante": f"sobrante {h.item_id}"}[h.fuente]
+        lin.append(f"  Hoja {n}: {etiqueta} ({h.largo:.0f} x {h.ancho:.0f}) - {len(h.colocaciones)} piezas")
+    nuevos = plan.sobrantes_nuevos
+    lin.append(f"Sobrantes reutilizables que quedarían: {len(nuevos)}")
+    for i, (n, (u, v, w, h)) in enumerate(sorted(nuevos, key=lambda t: -t[1][2] * t[1][3]), 1):
+        lin.append(f"  {w:.0f} x {h:.0f} mm  (hoja {n + 1})")
+    return lin
+
+
+# ----------------------------------------------------------------------------
+# Confirmar un pedido: descuenta placas usadas y agrega los sobrantes al inventario
+# ----------------------------------------------------------------------------
+def confirmar(inv: Inventario, plan: Plan, pedido_id: str, placa: "bp.Placa") -> dict:
+    if any(ped["id"] == pedido_id for ped in inv.pedidos):
+        raise ValueError(f"El pedido '{pedido_id}' ya fue confirmado; no se vuelve a descontar.")
+    # validar que todo lo que se va a usar siga disponible
+    por_id = {i.id: i for i in inv.items}
+    for h in plan.hojas:
+        if h.fuente != "nueva":
+            it = por_id.get(h.item_id)
+            if it is None or it.estado != "disponible":
+                raise ValueError(f"{h.item_id} ya no está disponible: volvé a generar el plan.")
+    usados, nuevos = [], []
+    for h in plan.hojas:
+        if h.fuente == "nueva":
+            iid = inv.agregar_placas(placa, 1, origen="compra")[0]
+            it = [i for i in inv.items if i.id == iid][0]
+        else:
+            it = por_id[h.item_id]
+        it.estado, it.usado_en = "usado", pedido_id
+        usados.append(it.id)
+        for (u, v, w, hh) in h.sobrantes:
+            s = inv.agregar_sobrante(plan.material, plan.espesor, w, hh, f"{pedido_id}:{it.id}")
+            nuevos.append(s.id)
+    inv.pedidos.append({"id": pedido_id, "fecha": datetime.now().isoformat(timespec="seconds"),
+                        "piezas": sum(len(h.colocaciones) for h in plan.hojas),
+                        "fuentes_usadas": usados, "sobrantes_generados": nuevos,
+                        "placas_compradas": plan.placas_nuevas})
+    return {"usados": usados, "sobrantes_nuevos": nuevos}
+
+
+# ----------------------------------------------------------------------------
+# Exportación a SVG (para ver el plan en el navegador)
+# ----------------------------------------------------------------------------
+def plan_a_svg_texto(plan: Plan, escala: float = 0.35) -> str:
+    sep_h = 60
+    ancho_max = max(h.largo for h in plan.hojas)
+    total_h = sum(h.ancho + sep_h for h in plan.hojas) + 40
+    W, H = ancho_max * escala + 40, total_h * escala + 30
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" '
+           f'viewBox="0 0 {W:.0f} {H:.0f}" font-family="sans-serif">',
+           '<rect width="100%" height="100%" fill="white"/>']
+    y_base = 30.0                      # margen superior (px) para el título de la primera hoja
+    for n, h in enumerate(plan.hojas, 1):
+        def X(u): return 20 + u * escala
+        def Y(v): return y_base + (h.ancho - v) * escala      # v hacia arriba
+        etiqueta = {"nueva": "Placa nueva", "placa": f"Placa {h.item_id}",
+                    "sobrante": f"Sobrante {h.item_id}"}[h.fuente]
+        out.append(f'<text x="20" y="{y_base - 6:.0f}" font-size="13" fill="#333">'
+                   f'Hoja {n}: {etiqueta} - {h.largo:.0f} x {h.ancho:.0f} mm</text>')
+        out.append(f'<rect x="{X(0):.1f}" y="{Y(h.ancho):.1f}" width="{h.largo * escala:.1f}" '
+                   f'height="{h.ancho * escala:.1f}" fill="#f3e3c3" stroke="#555"/>')
+        out.append(f'<rect x="{X(h.margen):.1f}" y="{Y(h.ancho - h.margen):.1f}" '
+                   f'width="{(h.largo - 2 * h.margen) * escala:.1f}" '
+                   f'height="{(h.ancho - 2 * h.margen) * escala:.1f}" fill="none" stroke="#aaa" '
+                   f'stroke-dasharray="4 3"/>')
+        for (u, v, w, hh) in h.sobrantes:
+            out.append(f'<rect x="{X(u):.1f}" y="{Y(v + hh):.1f}" width="{w * escala:.1f}" '
+                       f'height="{hh * escala:.1f}" fill="#9bd39b" fill-opacity="0.45" stroke="#2e8b2e" '
+                       f'stroke-dasharray="6 3"/>')
+            out.append(f'<text x="{X(u) + 4:.1f}" y="{Y(v + hh) + 14:.1f}" font-size="11" fill="#1d5e1d">'
+                       f'sobrante {w:.0f} x {hh:.0f}</text>')
+        for c in h.colocaciones:
+            cont = contorno_colocado(plan.contornos[c.nombre], c.u, c.v, c.dv)
+            pts = bp.muestrear(cont, 10)
+            d = " ".join(f"{X(a):.1f},{Y(b):.1f}" for a, b in pts)
+            color = "#a98ae0" if c.nombre == "poste" else "#7d9bf0"
+            out.append(f'<polygon points="{d}" fill="{color}" stroke="#222" stroke-width="0.8"/>')
+            for m in plan.mecanizados.get(c.nombre, []):            # rebajes (naranja) y agujeros (rojo)
+                mc = contorno_colocado(m["contorno"], c.u, c.v, c.dv)
+                dm = " ".join(f"{X(a):.1f},{Y(b):.1f}" for a, b in bp.muestrear(mc, 16))
+                if m.get("manual"):                                    # cara opuesta: va a mano, se dibuja punteado
+                    out.append(f'<polygon points="{dm}" fill="none" stroke="#2a6fdb" stroke-width="0.9" stroke-dasharray="3 2"/>')
+                else:
+                    out.append(f'<polygon points="{dm}" fill="#e8a33d" fill-opacity="0.55" stroke="#e8a33d" stroke-width="0.8"/>')
+            for hu in plan.huecos.get(c.nombre, []):                # agujeros pasantes
+                dh = " ".join(f"{X(a):.1f},{Y(b):.1f}" for a, b in bp.muestrear(contorno_colocado(hu["contorno"], c.u, c.v, c.dv), 16))
+                out.append(f'<polygon points="{dh}" fill="white" stroke="#222" stroke-width="0.8"/>')
+            out.append(f'<text x="{X(c.u + c.du / 2):.1f}" y="{Y(c.v + c.dv / 2) + 4:.1f}" font-size="10" '
+                       f'text-anchor="middle" fill="#111">{c.id}</text>')
+        y_base += (h.ancho + sep_h) * escala
+    out.append("</svg>")
+    return "\n".join(out)
+
+
+def plan_a_svg(plan: Plan, ruta: str, escala: float = 0.35):
+    """Guarda el plan de corte como SVG."""
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write(plan_a_svg_texto(plan, escala))
+</script>
+<script type="text/plain" id="py_web_api">"""
+web_api.py
+----------
+Puente entre el navegador (Pyodide) y la lógica del diseño. Recibe y devuelve JSON (texto), así que lo
+puede llamar cualquier interfaz. No tiene reglas propias: usa biblioteca_param, herrajes y nesting,
+las mismas que el componente de Grasshopper, de modo que hay una sola fuente de verdad.
+
+  calcular(json)    -> medidas, validación y geometría para dibujar el mueble
+  plan_corte(json)  -> plan de corte (nesting) con su SVG, cantidad de placas y costo de material
+  valores_iniciales() -> valores por defecto y rangos para armar los controles
+"""
+import json
+
+import biblioteca_param as bp
+import herrajes as hj
+import nesting as ns
+
+DENSIDAD_KG_M3 = 680.0          # densidad aproximada de la multiplaca de abedul (para estimar el peso)
+
+_CONV = {
+    "t": float, "h": float, "luz": float, "n_postes": int, "n_ranuras": int, "profundidad": float,
+    "separacion": float, "fresa": float, "anclaje": str, "zocalo": bool, "zocalo_alto": float,
+    "zocalo_prof": float, "n_tablas": int, "semilla": int, "sep_min": int, "ranuras_unicas": bool,
+    "anclaje_alto": float, "anclaje_ancho": float, "anclaje_espesor": float, "agujero_radio": float,
+    "holgura_u": float, "fresa_manual": float, "buje": float,
+}
+
+
+def _numero(v):
+    return None if v in (None, "") else float(v)
+
+
+def _construir(datos: dict):
+    kw = {}
+    for k, conv in _CONV.items():
+        v = datos.get(k)
+        if v is not None and v != "":
+            kw[k] = conv(v)
+    return bp.desde_dimensiones(ancho_total=_numero(datos.get("ancho_total")),
+                                alto_total=_numero(datos.get("alto_total")), **kw)
+
+
+def _limites(datos: dict) -> dict:
+    t = _numero(datos.get("t"))
+    h = _numero(datos.get("h")) or 0.0
+    t = t if t is not None else bp.PLACA_ABEDUL_15.espesor_real
+    lim = bp.limites_dimensiones(t, h, bp.PLACA_ABEDUL_15)
+    lim["profundidad_min"], lim["profundidad_max"] = bp.LIMITES["profundidad"]
+    lim["n_tablas_max"] = bp.LIMITES["n_tablas"][1]
+    lim["luz_max"] = bp.luz_max(t)
+    lim["luz_min"] = bp.LUZ_MIN
+    return lim
+
+
+def _pts(contorno, pasos=10):
+    return [[round(x, 2), round(y, 2)] for x, y in bp.muestrear(contorno, pasos)]
+
+
+def _pieza_web(pz):
+    return {"nombre": pz.nombre, "tipo": pz.tipo, "cantidad": pz.cantidad, "ancho": round(pz.ancho, 2),
+            "largo": round(pz.largo, 2), "espesor": pz.espesor,
+            "contorno": _pts(pz.contorno, 10),
+            "huecos": [_pts(h["contorno"], 14) for h in pz.huecos]}
+
+
+def calcular(json_str: str) -> str:
+    datos = json.loads(json_str)
+    p, notas, errores = _construir(datos)
+    salida = {"ok": False, "errores": [], "notas": notas, "limites": _limites(datos)}
+    if errores:
+        salida["errores"] = errores
+        return json.dumps(salida)
+    errores = bp.validar(p)
+    if errores:
+        salida["errores"] = errores
+        return json.dumps(salida)
+
+    piezas = bp.generar_piezas(p)
+    tablas, avisos = bp.tablas_efectivas(p)
+    r = bp.resumen(p)
+    area = sum(bp.area(pz.contorno) * pz.cantidad for pz in piezas)           # mm2 de placa en piezas
+    est = bp.estimar_placas(p)
+    anclajes = bp.anclajes(p)
+    salida.update({
+        "ok": True, "avisos": avisos,
+        "medidas": {
+            "ancho_total": r["ancho_total_mueble"], "alto_total": r["alto_total"], "profundidad": r["profundidad_total"],
+            "ancho_entre_postes": r["ancho_entre_postes"], "n_postes": p.n_postes, "n_tablas": len(tablas),
+            "n_ranuras": p.n_ranuras, "luz": p.luz, "luz_max": r["luz_max"], "flecha": r["flecha_estimada"],
+            "separacion": p.separacion, "espacio_libre": r["espacio_libre_entre_tablas"], "espesor": p.t,
+            "n_escuadras": len(anclajes) * p.n_postes, "anclaje": p.anclaje, "n_tablas_min": bp.min_tablas(p),
+            "peso_kg": round(area * p.t * 1e-9 * DENSIDAD_KG_M3, 1), "placas_minimas": est["placas_minimas"],
+            "costo_minimo_usd": round(est["costo_minimo_usd"], 2), "precio_placa_usd": p.placa.precio_usd,
+        },
+        "piezas": [_pieza_web(pz) for pz in piezas],
+        "instancias": [{"nombre": i.nombre, "tipo": i.tipo, "pieza": i.pieza, "origen": list(i.origen)}
+                       for i in bp.instancias(p)],
+        "tablas": [{"poste_ini": t.poste_ini, "poste_fin": t.poste_fin, "ranura": t.ranura,
+                    "z": bp.z_ranura(p, t.ranura)} for t in tablas],
+    })
+    if anclajes:
+        salida["herrajes"] = {"escuadra": hj.dimensiones_u(p), "replanteo": hj.tabla_replanteo(p),
+                              "regla": [round(x.largo) for x in hj.regla_replanteo(p)]}
+    return json.dumps(salida)
+
+
+def plan_corte(json_str: str) -> str:
+    datos = json.loads(json_str)
+    p, notas, errores = _construir(datos)
+    if errores or bp.validar(p):
+        return json.dumps({"ok": False})
+    z = ns.piezas_para_nesting(p)
+    plan = ns.planificar(z, ns.Inventario(), p, ns.ConfigNesting(fresa=p.fresa))
+    return json.dumps({
+        "ok": True, "hojas": len(plan.hojas), "placas_nuevas": plan.placas_nuevas,
+        "aprovechamiento": round(plan.aprovechamiento * 100, 1),
+        "costo_usd": round(plan.placas_nuevas * p.placa.precio_usd, 2),
+        "columnas": ns.columnas_por_placa(p, ns.ConfigNesting(fresa=p.fresa)),
+        "sobrantes": [[round(r[2]), round(r[3])] for _, r in plan.sobrantes_nuevos],
+        "svg": ns.plan_a_svg_texto(plan, 0.3),
+    })
+
+
+def valores_iniciales() -> str:
+    p = bp.Params()
+    return json.dumps({"t": p.t, "h": p.h, "fresa": p.fresa, "sep_min": p.sep_min, "profundidad": p.profundidad,
+                       "zocalo_alto": p.zocalo_alto, "zocalo_prof": p.zocalo_prof, "anclaje": p.anclaje,
+                       "limites": _limites({})})
+</script>
+<script id="worker-src" type="text/plain">
+/* Worker: carga Pyodide y corre la lógica del diseño (los .py de este mismo archivo) sin bloquear la pantalla. */
+let pyodide = null, api = null;
+const avisar = texto => self.postMessage({ progreso: texto });
+
+self.onmessage = async (e) => {
+  const { id, tipo, datos } = e.data;
+  try {
+    if (tipo === 'init') {
+      avisar('Descargando Python (la primera vez son unos 10 MB)…');
+      importScripts(datos.pyodideUrl + 'pyodide.js');
+      pyodide = await loadPyodide({ indexURL: datos.pyodideUrl });
+      avisar('Cargando las reglas de diseño…');
+      for (const [nombre, codigo] of Object.entries(datos.archivos)) pyodide.FS.writeFile('/home/pyodide/' + nombre, codigo);
+      pyodide.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
+      api = pyodide.pyimport('web_api');
+      self.postMessage({ id, resultado: api.valores_iniciales() });
+    } else {
+      const t0 = performance.now();
+      const r = api[tipo](datos);
+      self.postMessage({ id, resultado: r, ms: Math.round(performance.now() - t0) });
+    }
+  } catch (err) {
+    self.postMessage({ id, error: String(err && err.message ? err.message : err) });
+  }
+};
+
+</script>
+<script>window.__CFG = {"pyodideUrl": "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/", "archivos": ["biblioteca_param.py", "herrajes.py", "nesting.py", "web_api.py"]};</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* Geometría de las piezas. Ejes del mundo (Y hacia arriba): X = largo del mueble, Y = altura, Z = profundidad
+   (la pared está en Z = 0 y el frente mira hacia +Z). Se corresponde con los ejes del diseño así:
+   x_diseño (profundidad) -> Z, y_diseño (largo) -> X, z_diseño (altura) -> Y. */
+
+function limpiarPuntos(pts) {
+  const out = [];
+  for (const p of pts) {
+    const q = out[out.length - 1];
+    if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6) out.push(p);
+  }
+  if (out.length > 1) {
+    const a = out[0], b = out[out.length - 1];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) <= 1e-6) out.pop();
+  }
+  return out;
+}
+
+/* pz = {tipo: 'poste' | 'tabla', contorno: [[x, y]...], huecos: [[[x, y]...]...], espesor}
+   El contorno viene en el plano de la pieza: (x = profundidad, y = altura) en los postes y
+   (x = profundidad, y = largo) en las tablas. Se extruye el espesor. */
+function geometriaPieza(pz) {
+  const v2 = pts => limpiarPuntos(pts).map(p => new THREE.Vector2(p[0], p[1]));
+  const forma = new THREE.Shape(v2(pz.contorno));
+  for (const h of pz.huecos || []) forma.holes.push(new THREE.Path(v2(h)));
+  const g = new THREE.ExtrudeGeometry(forma, { depth: pz.espesor, bevelEnabled: false, curveSegments: 1, steps: 1 });
+  const pos = g.attributes.position;
+  const esPoste = pz.tipo === 'poste';
+  // (u, v, w) = (x_diseño, y_contorno, espesor)
+  //   poste: v = altura (Y), w = largo del mueble (X)  -> (X, Y, Z) = (w, v, u)   (permutación impar)
+  //   tabla: v = largo (X),  w = altura (Y)            -> (X, Y, Z) = (v, w, u)   (permutación par)
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getX(i), v = pos.getY(i), w = pos.getZ(i);
+    if (esPoste) pos.setXYZ(i, w, v, u); else pos.setXYZ(i, v, w, u);
+  }
+  if (esPoste) {                                   // permutación impar: se invierte el orden de cada triángulo
+    for (let i = 0; i + 2 < pos.count; i += 3) {
+      const x = pos.getX(i + 1), y = pos.getY(i + 1), z = pos.getZ(i + 1);
+      pos.setXYZ(i + 1, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
+      pos.setXYZ(i + 2, x, y, z);
+    }
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  g.computeBoundingBox();
+  return g;
+}
+
+/* Posición de una instancia en el mundo (el origen del diseño es [x, y, z] = [profundidad, largo, altura]). */
+function posicionInstancia(inst) {
+  const o = inst.origen;
+  return inst.tipo === 'poste' ? [o[1], 0, 0] : [o[1], o[2], 0];
+}
+
+
+const CFG = window.__CFG;
+const $ = (s, r = document) => r.querySelector(s);
+function h(tag, attrs = {}, ...hijos) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v);
+  }
+  for (const c of hijos.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+const fmt = (n, d = 0) => Number(n).toLocaleString('es-UY', { maximumFractionDigits: d, minimumFractionDigits: d });
+
+/* ---------------------------------------------------------------- estado */
+const POR_DEFECTO = { ancho_total: 1880, alto_total: 2000, profundidad: 193, n_tablas: null, semilla: 0, zocalo: true,
+  zocalo_alto: 55, zocalo_prof: 15, anclaje: 'ambos', t: 15, h: 0, fresa: 6, sep_min: 2, n_ranuras: null };
+function leerHash() {
+  try { const m = location.hash.match(/c=([^&]+)/); return m ? JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))) : {}; }
+  catch (e) { return {}; }
+}
+function guardarHash() {
+  const cambios = {};
+  for (const k of Object.keys(POR_DEFECTO)) if (estado[k] !== POR_DEFECTO[k]) cambios[k] = estado[k];
+  history.replaceState(null, '', Object.keys(cambios).length ? '#c=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(cambios))))) : location.pathname + location.search);
+}
+let estado = { ...POR_DEFECTO, ...leerHash() };
+let ultimo = null;           // último resultado de calcular()
+const controles = {};        // id -> {rango, num, it}
+
+/* ---------------------------------------------------------------- worker */
+const worker = new Worker(URL.createObjectURL(new Blob([$('#worker-src').textContent], { type: 'text/javascript' })));
+const pendientes = new Map(); let sigId = 1;
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.progreso) { $('#cargando-texto').textContent = m.progreso; return; }
+  const p = pendientes.get(m.id); if (!p) return; pendientes.delete(m.id);
+  m.error ? p.rej(new Error(m.error)) : p.res(m);
+};
+worker.onerror = (e) => { $('#cargando-texto').textContent = 'No se pudo iniciar: ' + (e.message || 'error del worker'); };
+const pedir = (tipo, datos) => new Promise((res, rej) => { const id = sigId++; pendientes.set(id, { res, rej }); worker.postMessage({ id, tipo, datos }); });
+
+/* ---------------------------------------------------------------- controles */
+const CONTROLES = [
+  { grupo: 'Medidas', items: [
+    { id: 'ancho_total', et: 'Ancho total', u: 'mm', paso: 10, lim: ['ancho_min', 'ancho_max'], ayuda: 'De punta a punta, contando lo que sobresalen las tablas (100 mm a cada lado). El sistema elige la menor cantidad de postes posible.' },
+    { id: 'alto_total', et: 'Alto total', u: 'mm', paso: 10, lim: ['alto_min', 'alto_max'], ayuda: 'Queda exacto: las ranuras se reparten con una separación uniforme que nunca baja de 110 mm.' },
+    { id: 'profundidad', et: 'Profundidad', u: 'mm', paso: 1, lim: ['profundidad_min', 'profundidad_max'], ayuda: 'Con 193 mm o menos entran más piezas por placa y se usa menos material.' } ] },
+  { grupo: 'Estantes', items: [
+    { id: 'n_tablas', et: 'Cantidad de tablas', u: '', paso: 1, auto: 'n_tablas', lim: ['n_tablas_min', 'n_tablas_max_ui'], ayuda: 'Siempre hay una tabla abajo y una arriba que atan todos los postes; el resto se reparte al azar.' } ],
+    extra: () => h('button', { class: 'prim', onclick: () => { estado.semilla = Math.floor(Math.random() * 1000); programar(0); } }, 'Redistribuir tablas al azar') },
+  { grupo: 'Zócalo', custom: 'zocalo' },
+  { grupo: 'Anclaje a la pared', custom: 'anclaje' },
+  { grupo: 'Avanzado (taller)', abierto: false, items: [
+    { id: 't', et: 'Espesor real de la placa', u: 'mm', paso: 0.1, lim: [5, 30], ayuda: 'Medilo con calibre: define el ancho de las ranuras.' },
+    { id: 'h', et: 'Holgura de los encastres', u: 'mm', paso: 0.05, lim: [0, 0.5] },
+    { id: 'fresa', et: 'Fresa de la CNC', u: 'mm', paso: 0.5, lim: [3, 10.5], ayuda: 'Define los alivios de las esquinas y la separación entre piezas.' },
+    { id: 'sep_min', et: 'Separación mínima entre tablas', u: 'ranuras', paso: 1, lim: [1, 5], ayuda: 'Con 2 ranuras quedan al menos 235 mm libres para libros.' },
+    { id: 'n_ranuras', et: 'Cantidad de ranuras', u: '', paso: 1, auto: 'n_ranuras', lim: [4, 40], ayuda: 'Automático: la mayor cantidad que respeta los 110 mm entre ranuras.' } ] },
+];
+
+function crearControl(it) {
+  const rango = h('input', { type: 'range', step: it.paso }), num = h('input', { type: 'number', step: it.paso });
+  const etiqueta = h('label', { title: it.ayuda || '' }, it.et);
+  if (it.auto) {
+    const a = h('button', { class: 'auto', title: 'Dejar que el sistema lo elija', onclick: () => { estado[it.id] = null; programar(0); } }, 'automático');
+    etiqueta.append(a);
+  }
+  const fila = h('div', { class: 'ctl' }, etiqueta, h('div', { class: 'fila' }, rango, num, h('span', { class: 'u' }, it.u)));
+  if (typeof it.lim[0] === 'number') { rango.min = num.min = it.lim[0]; rango.max = num.max = it.lim[1]; }
+  const poner = (v) => { rango.value = num.value = v; };
+  rango.oninput = () => { poner(rango.value); estado[it.id] = +rango.value; programar(120); };
+  num.onchange = () => { if (num.value === '') return; poner(num.value); estado[it.id] = +num.value; programar(0); };
+  controles[it.id] = { rango, num, it, fila, poner };
+  return fila;
+}
+function construirPanel() {
+  const cont = $('#controles');
+  for (const g of CONTROLES) {
+    const caja = g.abierto === false ? h('details', { class: 'grupo' }, h('summary', {}, g.grupo)) : h('section', { class: 'grupo' }, h('h2', {}, g.grupo));
+    if (g.custom === 'zocalo') {
+      const chk = h('input', { type: 'checkbox', id: 'zocalo' }); chk.checked = estado.zocalo;
+      chk.onchange = () => { estado.zocalo = chk.checked; $('#zocalo-medidas').style.display = chk.checked ? '' : 'none'; programar(0); };
+      caja.append(h('label', { class: 'check', title: 'Recorte en la base trasera de cada poste para apoyar la biblioteca por delante de un zócalo.' }, chk, 'Tengo zócalo en la pared'));
+      const med = h('div', { id: 'zocalo-medidas' },
+        crearControl({ id: 'zocalo_alto', et: 'Alto del zócalo', u: 'mm', paso: 1, lim: [0, 150] }),
+        crearControl({ id: 'zocalo_prof', et: 'Espesor del zócalo', u: 'mm', paso: 1, lim: [0, 50] }));
+      med.style.display = estado.zocalo ? '' : 'none'; caja.append(med);
+    } else if (g.custom === 'anclaje') {
+      const sel = h('select', {}, h('option', { value: 'ambos' }, 'Arriba y abajo (recomendado)'), h('option', { value: 'superior' }, 'Solo arriba'), h('option', { value: 'ninguno' }, 'Sin anclaje'));
+      sel.value = estado.anclaje; sel.onchange = () => { estado.anclaje = sel.value; programar(0); };
+      caja.append(h('div', { class: 'ctl' }, h('label', { title: 'Escuadras en U atornilladas a la pared: evitan que la biblioteca vuelque.' }, 'Fijación'), h('div', { class: 'fila' }, sel)));
+      caja.append(h('p', { class: 'nota-chica' }, 'Una biblioteca cargada vuelca con muy poca fuerza: fijarla a la pared es parte del producto.'));
+    } else {
+      for (const it of g.items) caja.append(crearControl(it));
+      if (g.extra) caja.append(g.extra());
+    }
+    cont.append(caja);
+  }
+}
+function sincronizarControles(r) {
+  const m = r.ok ? r.medidas : null, l = r.limites || {};
+  for (const [id, c] of Object.entries(controles)) {
+    const it = c.it;
+    if (Array.isArray(it.lim) && typeof it.lim[0] === 'string') {
+      const mn = it.lim[0] === 'n_tablas_min' ? (m ? m.n_tablas_min : 2) : l[it.lim[0]];
+      const mx = it.lim[1] === 'n_tablas_max_ui' ? 60 : l[it.lim[1]];
+      if (mn != null) c.rango.min = c.num.min = mn; if (mx != null) c.rango.max = c.num.max = mx;
+    }
+    let v = estado[id];
+    if (v == null && m) v = id === 'n_tablas' ? m.n_tablas : id === 'n_ranuras' ? m.n_ranuras : v;
+    if (v != null && document.activeElement !== c.num) c.poner(v);
+    if (it.auto) c.fila.querySelector('.auto').style.visibility = estado[id] == null ? 'hidden' : 'visible';
+  }
+}
+
+/* ---------------------------------------------------------------- cálculo */
+let enCurso = null, hayPendiente = false, temporizador = null, tokenPlan = 0;
+function programar(ms) { clearTimeout(temporizador); temporizador = setTimeout(recalcular, ms); guardarHash(); }
+function recalcular() {
+  if (enCurso) { hayPendiente = true; return enCurso; }
+  enCurso = (async () => { do { hayPendiente = false; await ciclo(); } while (hayPendiente); enCurso = null; })();
+  return enCurso;
+}
+async function ciclo() {
+  $('#estado-calculo').textContent = 'Calculando…';
+  const datos = JSON.stringify(estado);
+  let r, ms;
+  try { const x = await pedir('calcular', datos); r = JSON.parse(x.resultado); ms = x.ms; }
+  catch (err) { $('#estado-calculo').textContent = 'Error: ' + err.message; return; }
+  ultimo = r; aplicarResultado(r, ms);
+  if (r.ok) programarPlan(datos);
+}
+function programarPlan(datos) {
+  const token = ++tokenPlan; $('#plan-contenido').style.opacity = .5;
+  setTimeout(async () => {
+    if (token !== tokenPlan) return;
+    try { const x = await pedir('plan_corte', datos); if (token === tokenPlan) mostrarPlan(JSON.parse(x.resultado)); } catch (e) { /* se ignora */ }
+  }, 350);
+}
+
+/* ---------------------------------------------------------------- resultado */
+function aplicarResultado(r, ms) {
+  sincronizarControles(r);
+  const msg = $('#mensajes'); msg.replaceChildren();
+  for (const e of r.errores || []) msg.append(h('div', { class: 'msg err' }, e));
+  for (const a of r.avisos || []) msg.append(h('div', { class: 'msg av' }, a));
+  for (const n of r.notas || []) msg.append(h('div', { class: 'msg nota' }, n));
+  $('#estado-calculo').textContent = r.ok ? `Calculado en ${ms} ms` : 'Hay medidas que corregir';
+  if (!r.ok) return;
+  dibujar(r); mostrarResumen(r); mostrarDatos(r);
+}
+function mostrarResumen(r) {
+  const m = r.medidas, cont = $('#resumen'); cont.replaceChildren();
+  const pill = (g, c) => h('div', { class: 'pill' }, h('b', {}, g), h('span', {}, c));
+  cont.append(pill(`${fmt(m.ancho_total)} × ${fmt(m.alto_total)} × ${fmt(m.profundidad)} mm`, 'ancho × alto × profundidad'),
+    pill(`${m.n_postes} postes · ${m.n_tablas} tablas`, `luz de ${fmt(m.luz)} mm entre postes`),
+    pill(`≈ ${fmt(m.peso_kg)} kg`, 'peso aproximado'),
+    pill(`${m.placas_minimas} placas (mín.)`, `≈ U$S ${fmt(m.costo_minimo_usd)} de material`));
+}
+function mostrarPlan(p) {
+  const c = $('#plan-contenido'); c.style.opacity = 1; c.replaceChildren();
+  if (!p.ok) return;
+  c.append(h('div', { class: 'tarjetas' },
+    h('div', { class: 'tarjeta' }, h('b', {}, p.placas_nuevas), h('span', {}, 'placas de 2440 × 1220 mm')),
+    h('div', { class: 'tarjeta' }, h('b', {}, `U$S ${fmt(p.costo_usd, 2)}`), h('span', {}, 'costo de material (referencia)')),
+    h('div', { class: 'tarjeta' }, h('b', {}, `${p.aprovechamiento} %`), h('span', {}, 'aprovechamiento de las placas')),
+    h('div', { class: 'tarjeta' }, h('b', {}, p.columnas), h('span', {}, 'columnas de piezas por placa'))));
+  const caja = h('div', { class: 'svgbox' }); caja.innerHTML = p.svg;
+  c.append(h('h3', {}, 'Cómo se cortan las piezas (las piezas no se giran: respetan la veta)'), caja);
+  if (p.sobrantes.length) c.append(h('p', { class: 'nota-chica' }, 'Sobrantes reutilizables que quedan: ' + p.sobrantes.map(s => `${s[0]} × ${s[1]} mm`).join(', ') + '.'));
+  const m = ultimo && ultimo.ok ? ultimo.medidas : null;
+  const resumen = $('#resumen').lastChild;
+  if (resumen && m) { resumen.firstChild.textContent = `${p.placas_nuevas} placas`; resumen.lastChild.textContent = `U$S ${fmt(p.costo_usd)} de material`; }
+}
+function mostrarDatos(r) {
+  const m = r.medidas, c = $('#datos-contenido'); c.replaceChildren();
+  const tabla = (cab, filas) => h('table', {}, h('tr', {}, cab.map(x => h('th', {}, x))), filas.map(f => h('tr', {}, f.map(x => h('td', {}, x)))));
+  c.append(h('h3', {}, 'Piezas'), tabla(['Pieza', 'Cantidad', 'Medidas (mm)'], r.piezas.map(p => [p.nombre.replaceAll('_', ' '), p.cantidad, `${fmt(p.ancho)} × ${fmt(p.largo, 1)} × ${p.espesor}`])));
+  c.append(h('h3', {}, 'Estructura'), tabla(['Dato', 'Valor'], [
+    ['Luz entre postes', `${fmt(m.luz, 1)} mm (máx. ${fmt(m.luz_max)} mm)`],
+    ['Flecha estimada de una tabla con libros', `${fmt(m.flecha, 1)} mm (luz/${fmt(m.luz / m.flecha)})`],
+    ['Separación entre ranuras', `${fmt(m.separacion, 1)} mm`],
+    ['Espacio libre entre tablas (para libros)', `${fmt(m.espacio_libre)} mm`],
+    ['Ranuras por poste', m.n_ranuras], ['Tablas (mínimo estructural)', `${m.n_tablas} (${m.n_tablas_min})`]]));
+  c.append(h('p', { class: 'nota-chica' }, 'Valores estimados por cálculo, a confirmar con el prototipo físico.'));
+  if (r.herrajes) {
+    const u = r.herrajes.escuadra;
+    c.append(h('h3', {}, `Escuadra en U (${m.n_escuadras} unidades)`), tabla(['Dato', 'Valor'], [
+      ['Chapa', `${u.chapa} mm`], ['Alto', `${u.alto} mm`], ['Largo de los brazos', `${u.largo_brazos} mm`],
+      ['Ancho exterior (= espesor de la placa)', `${fmt(u.ancho_exterior, 1)} mm`], ['Ancho interior', `${fmt(u.ancho_interior, 1)} mm`],
+      ['Agujero de los brazos', `Ø${fmt(u.diametro_agujero_brazos, 1)} mm`], ['Radio mínimo de las puntas', `${u.radio_puntas_min} mm`]]));
+    c.append(h('h3', {}, 'Replanteo en la pared'), h('p', { class: 'nota-chica' }, 'Posición del tornillo de cada escuadra (y desde la cara izquierda del primer poste; z desde el piso).'),
+      tabla(['Poste', 'y (mm)', 'z superior (mm)', 'z inferior (mm)'], r.herrajes.replanteo.map(f => [f.poste + 1, fmt(f.y_centro, 1), f.z_superior != null ? fmt(f.z_superior) : '—', f.z_inferior != null ? fmt(f.z_inferior) : '—'])));
+  }
+}
+
+/* ---------------------------------------------------------------- escena 3D */
+const lienzo = $('#lienzo'), canvas = $('#c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const escena = new THREE.Scene();
+const camara = new THREE.PerspectiveCamera(35, 1, 10, 60000);
+const orbita = new OrbitControls(camara, canvas);
+orbita.addEventListener('change', () => pedirRender());
+escena.add(new THREE.HemisphereLight(0xffffff, 0xcdbfa8, 1.45));
+const sol = new THREE.DirectionalLight(0xffffff, 0.95); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0004;
+escena.add(sol); escena.add(sol.target);
+const grupo = new THREE.Group(); escena.add(grupo);
+const grupoCotas = new THREE.Group(); escena.add(grupoCotas);
+const pared = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xf8f6f2, roughness: 1 }));
+pared.receiveShadow = true; pared.position.z = -1; escena.add(pared);
+const piso = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xe9e3d8, roughness: 1 }));
+piso.rotation.x = -Math.PI / 2; piso.receiveShadow = true; escena.add(piso);
+const matPoste = new THREE.MeshStandardMaterial({ color: 0xd2b180, roughness: .75, metalness: 0 });
+const matTabla = new THREE.MeshStandardMaterial({ color: 0xe3c795, roughness: .75, metalness: 0 });
+const matLinea = new THREE.LineBasicMaterial({ color: 0x7a5a2e, transparent: true, opacity: .45 });
+let caja = new THREE.Box3(new THREE.Vector3(-900, 0, 0), new THREE.Vector3(900, 2000, 193)), tamPrevio = null;
+let etiquetas = [];
+
+let renderPedido = false;
+function pedirRender() { if (!renderPedido) { renderPedido = true; requestAnimationFrame(() => { renderPedido = false; renderizar(); }); } }
+function renderizar() { renderer.render(escena, camara); posicionarEtiquetas(); }
+function ajustarTamano() {
+  const w = lienzo.clientWidth, hh = lienzo.clientHeight; if (!w || !hh) return;
+  renderer.setSize(w, hh, false); camara.aspect = w / hh; camara.updateProjectionMatrix(); pedirRender();
+}
+new ResizeObserver(ajustarTamano).observe(lienzo);
+
+function liberar(obj) { obj.traverse(o => { if (o.geometry) o.geometry.dispose(); }); obj.clear(); }
+function dibujar(r) {
+  liberar(grupo);
+  const geos = {};
+  for (const pz of r.piezas) { const g = geometriaPieza(pz); geos[pz.nombre] = { g, e: new THREE.EdgesGeometry(g, 30) }; }
+  for (const inst of r.instancias) {
+    const { g, e } = geos[inst.pieza], pos = posicionInstancia(inst);
+    const malla = new THREE.Mesh(g, inst.tipo === 'poste' ? matPoste : matTabla);
+    malla.position.set(...pos); malla.castShadow = malla.receiveShadow = true; malla.userData.inst = inst;
+    const lin = new THREE.LineSegments(e, matLinea); lin.position.set(...pos);
+    grupo.add(malla, lin);
+  }
+  grupo.position.x = 0; grupo.updateMatrixWorld(true);
+  const c0 = new THREE.Box3().setFromObject(grupo);
+  grupo.position.x = -(c0.min.x + c0.max.x) / 2; grupo.updateMatrixWorld(true);
+  caja = new THREE.Box3().setFromObject(grupo);
+  const tam = caja.getSize(new THREE.Vector3()), ctr = caja.getCenter(new THREE.Vector3());
+  const ap = Math.max(tam.x, tam.y) * .9;
+  pared.scale.set(Math.max(tam.x + 2400, 4200), Math.max(tam.y + 700, 3000), 1); pared.position.set(ctr.x, pared.scale.y / 2, -1);
+  piso.scale.set(pared.scale.x, tam.z + 2600, 1); piso.position.set(ctr.x, -0.5, (tam.z + 2600) / 2 - 1300);
+  sol.position.set(ctr.x + tam.x * .18, tam.y * 1.25 + 500, tam.z + Math.max(tam.x, tam.y) * 1.3);
+  sol.target.position.set(ctr.x, tam.y * .4, 0);
+  Object.assign(sol.shadow.camera, { left: -ap, right: ap, top: ap, bottom: -ap, near: 10, far: Math.max(tam.x, tam.y) * 4 + 2000 }); sol.shadow.camera.updateProjectionMatrix();
+  dibujarCotas(tam);
+  const cambioGrande = !tamPrevio || Math.abs(tam.x - tamPrevio.x) / tamPrevio.x > .25 || Math.abs(tam.y - tamPrevio.y) / tamPrevio.y > .25;
+  tamPrevio = tam.clone();
+  if (cambioGrande) vista('persp'); else pedirRender();
+}
+function cota(a, b, tick, texto, mid) {
+  const geo = new THREE.BufferGeometry().setFromPoints([a, b, a.clone().add(tick), a.clone().sub(tick), b.clone().add(tick), b.clone().sub(tick)]);
+  const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x3b3b3b })); grupoCotas.add(l);
+  const div = h('div', { class: 'cota' }, texto); $('#etiquetas').append(div); etiquetas.push({ div, pos: mid });
+}
+function dibujarCotas(tam) {
+  liberar(grupoCotas); etiquetas.forEach(e => e.div.remove()); etiquetas = [];
+  const m = ultimo.medidas, x0 = caja.min.x, x1 = caja.max.x, zf = caja.max.z, v = (x, y, z) => new THREE.Vector3(x, y, z);
+  cota(v(x0, tam.y + 170, zf), v(x1, tam.y + 170, zf), v(0, 40, 0), `${fmt(m.ancho_total)} mm`, v((x0 + x1) / 2, tam.y + 170, zf));
+  cota(v(x0 - 160, 0, 0), v(x0 - 160, tam.y, 0), v(40, 0, 0), `${fmt(m.alto_total)} mm`, v(x0 - 160, tam.y / 2, 0));
+  cota(v(x1 + 160, 0, 0), v(x1 + 160, 0, zf), v(40, 0, 0), `${fmt(m.profundidad)} mm`, v(x1 + 160, 0, zf / 2));
+  alternarCotas();
+}
+function alternarCotas() { const on = $('#chk-cotas').checked; grupoCotas.visible = on; etiquetas.forEach(e => e.div.style.display = on ? '' : 'none'); pedirRender(); }
+function posicionarEtiquetas() {
+  if (!$('#chk-cotas').checked) return;
+  const w = lienzo.clientWidth, hh = lienzo.clientHeight;
+  for (const e of etiquetas) {
+    const p = e.pos.clone().project(camara);
+    const visible = p.z > -1 && p.z < 1;
+    e.div.style.display = visible ? '' : 'none';
+    e.div.style.left = ((p.x + 1) / 2 * w) + 'px'; e.div.style.top = ((1 - p.y) / 2 * hh) + 'px';
+  }
+}
+function vista(nombre) {
+  const tam = caja.getSize(new THREE.Vector3()), ctr = caja.getCenter(new THREE.Vector3());
+  const fov = camara.fov * Math.PI / 180, asp = camara.aspect;
+  const lateral = nombre === 'lateral';
+  const dAlto = (tam.y * 1.32) / (2 * Math.tan(fov / 2)), dAncho = ((lateral ? tam.z * 2.5 : tam.x * 1.15)) / (2 * Math.tan(fov / 2) * asp);
+  const dist = Math.max(dAlto, dAncho) + tam.z;
+  const dir = nombre === 'frontal' ? new THREE.Vector3(0, 0.02, 1) : lateral ? new THREE.Vector3(1, 0.04, 0.0001) : new THREE.Vector3(0.62, 0.24, 1);
+  camara.position.copy(ctr).add(dir.normalize().multiplyScalar(dist));
+  orbita.target.copy(ctr).add(new THREE.Vector3(0, tam.y * 0.04, 0)); camara.near = Math.max(10, dist / 200); camara.far = dist * 20; camara.updateProjectionMatrix(); orbita.update(); pedirRender();
+}
+// ayuda al pasar el mouse
+const rayo = new THREE.Raycaster(), puntero = new THREE.Vector2(); let tipPend = null;
+canvas.addEventListener('pointermove', (ev) => { tipPend = ev; requestAnimationFrame(actualizarTip); });
+canvas.addEventListener('pointerleave', () => { $('#tip').style.display = 'none'; });
+function actualizarTip() {
+  const ev = tipPend; if (!ev || !ultimo || !ultimo.ok) return; tipPend = null;
+  const r = canvas.getBoundingClientRect(); puntero.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  rayo.setFromCamera(puntero, camara);
+  const hit = rayo.intersectObjects(grupo.children.filter(o => o.isMesh), false)[0], tip = $('#tip');
+  if (!hit) { tip.style.display = 'none'; return; }
+  const inst = hit.object.userData.inst, pz = ultimo.piezas.find(p => p.nombre === inst.pieza);
+  let txt;
+  if (inst.tipo === 'poste') txt = `Poste ${inst.nombre.split('_')[1]} · alto ${fmt(pz.largo)} mm`;
+  else { const t = ultimo.tablas[+inst.nombre.split('_')[1] - 1]; txt = `Tabla ${inst.nombre.split('_')[1]} · cruza los postes ${t.poste_ini + 1} a ${t.poste_fin + 1} · altura ${fmt(t.z)} mm · largo ${fmt(pz.largo)} mm`; }
+  tip.textContent = txt; tip.style.display = 'block'; tip.style.left = Math.min(ev.clientX - r.left + 14, r.width - 290) + 'px'; tip.style.top = (ev.clientY - r.top + 14) + 'px';
+}
+
+/* ---------------------------------------------------------------- interfaz */
+for (const b of document.querySelectorAll('#tabs button')) b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('act', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('act', t.id === b.dataset.tab)); ajustarTamano();
+};
+for (const b of document.querySelectorAll('#barra button')) b.onclick = () => vista(b.dataset.vista === 'encuadrar' ? 'persp' : b.dataset.vista);
+$('#chk-cotas').onchange = alternarCotas;
+$('#chk-pared').onchange = () => { pared.visible = $('#chk-pared').checked; pedirRender(); };
+$('#btn-reiniciar').onclick = () => { estado = { ...POR_DEFECTO }; $('#zocalo').checked = true; $('#zocalo-medidas').style.display = ''; document.querySelector('#controles select').value = 'ambos'; programar(0); };
+$('#btn-enlace').onclick = async () => { guardarHash(); try { await navigator.clipboard.writeText(location.href); $('#btn-enlace').textContent = '¡Copiado!'; } catch (e) { $('#btn-enlace').textContent = 'Copialo de la barra'; } setTimeout(() => $('#btn-enlace').textContent = 'Copiar enlace', 1800); };
+
+/* ---------------------------------------------------------------- arranque */
+(async function iniciar() {
+  construirPanel(); ajustarTamano();
+  try {
+    const archivos = {}; for (const nombre of CFG.archivos) archivos[nombre] = $('#py_' + nombre.replace('.py', '')).textContent;
+    const ini = await pedir('init', { pyodideUrl: new URL(CFG.pyodideUrl, location.href).href, archivos });
+    const v = JSON.parse(ini.resultado);
+    for (const [k, val] of Object.entries({ t: v.t, h: v.h, fresa: v.fresa })) if (!(k in leerHash())) estado[k] = val;
+    $('#cargando-texto').textContent = 'Calculando el primer diseño…';
+    await recalcular();
+    $('#cargando').classList.add('oculto');
+    window.__listo = true;
+  } catch (err) {
+    $('#cargando-texto').textContent = 'No se pudo cargar el motor de cálculo: ' + err.message + '. Revisá tu conexión a internet.';
+  }
+})();
+
+// ganchos para pruebas
+window.__app = {
+  estado: () => estado, ultimo: () => ultimo, vista, renderizar,
+  aplicar: async (cambios) => { Object.assign(estado, cambios); await recalcular(); renderizar(); return ultimo; },
+  caja: () => { const s = caja.getSize(new THREE.Vector3()); return { x: s.x, y: s.y, z: s.z }; },
+  mallas: () => grupo.children.filter(o => o.isMesh).length,
+};
+
+</script>
+</body>
+</html>
